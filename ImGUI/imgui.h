@@ -250,11 +250,20 @@ typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                
 // ImVec2: 2D vector used to store positions, sizes etc. [Compile-time configurable type]
 // This is a frequently used type in the API. Consider using IM_VEC2_CLASS_EXTRA to create implicit cast from/to our preferred type.
 IM_MSVC_RUNTIME_CHECKS_OFF
+
+#include <d3dx9math.h>
 struct ImVec2
 {
     float                                   x, y;
     constexpr ImVec2()                      : x(0.0f), y(0.0f) { }
     constexpr ImVec2(float _x, float _y)    : x(_x), y(_y) { }
+    ImVec2 operator+ (const ImVec2& v) { return { x + v.x, y + v.y }; }
+    ImVec2 operator- (const ImVec2& v) { return { x - v.x, y - v.y }; }
+    ImVec2 operator+ (int v) { return { x + v, y + v }; }
+    ImVec2 operator- (int v) { return { x - v, y - v }; }
+    ImVec2 operator= (const D3DXVECTOR2& v) { x = v.x; y = v.y; return { x, y }; }
+    bool   operator==(const D3DXVECTOR2& v) { return x == v.x && y == v.y; }
+    bool   operator!=(const D3DXVECTOR2& v) { return !(*this == v); }
     float  operator[] (size_t idx) const    { IM_ASSERT(idx <= 1); return (&x)[idx]; }    // We very rarely use this [] operator, the assert overhead is fine.
     float& operator[] (size_t idx)          { IM_ASSERT(idx <= 1); return (&x)[idx]; }    // We very rarely use this [] operator, the assert overhead is fine.
 #ifdef IM_VEC2_CLASS_EXTRA

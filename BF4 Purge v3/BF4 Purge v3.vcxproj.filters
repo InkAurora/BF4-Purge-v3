@@ -11,9 +11,6 @@
     <Filter Include="ImGUI">
       <UniqueIdentifier>{770af657-6688-46f5-8cef-b6a0571a5192}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Visuals">
-      <UniqueIdentifier>{7203e2ad-ee36-48e2-ac87-b387d0799bdc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="SDK">
       <UniqueIdentifier>{531fc25d-87b8-451a-a331-c346f59533ea}</UniqueIdentifier>
     </Filter>
@@ -22,6 +19,15 @@
     </Filter>
     <Filter Include="Features">
       <UniqueIdentifier>{d49fa091-08c8-4f8f-9e00-127efefc6172}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Menu">
+      <UniqueIdentifier>{7203e2ad-ee36-48e2-ac87-b387d0799bdc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Internal">
+      <UniqueIdentifier>{cec132e7-bd54-46af-a1a5-e9cd21d5733c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Renderer">
+      <UniqueIdentifier>{a4d63faf-b70d-48ec-9cbd-617a01943686}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -50,7 +56,7 @@
       <Filter>ImGUI</Filter>
     </ClCompile>
     <ClCompile Include="Interface.cpp">
-      <Filter>Visuals</Filter>
+      <Filter>Menu</Filter>
     </ClCompile>
     <ClCompile Include="Engine.cpp">
       <Filter>SDK</Filter>
@@ -58,7 +64,22 @@
     <ClCompile Include="Aimbot.cpp">
       <Filter>Features</Filter>
     </ClCompile>
-    <ClCompile Include="ESP.cpp">
+    <ClCompile Include="Visuals.cpp">
+      <Filter>Features</Filter>
+    </ClCompile>
+    <ClCompile Include="BoundingBox.cpp">
+      <Filter>Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="Globals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TypeInfo.cpp">
+      <Filter>SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Cfg.cpp">
       <Filter>Features</Filter>
     </ClCompile>
   </ItemGroup>
@@ -102,11 +123,26 @@
     <ClInclude Include="Aimbot.h">
       <Filter>Features</Filter>
     </ClInclude>
-    <ClInclude Include="ESP.h">
+    <ClInclude Include="Interface.h">
+      <Filter>Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Visuals.h">
       <Filter>Features</Filter>
     </ClInclude>
-    <ClInclude Include="Interface.h">
-      <Filter>Visuals</Filter>
+    <ClInclude Include="BoundingBox.h">
+      <Filter>Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="Globals.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TypeInfo.h">
+      <Filter>SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Cfg.h">
+      <Filter>Features</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

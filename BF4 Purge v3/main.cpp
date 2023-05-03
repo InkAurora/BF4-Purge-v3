@@ -1,11 +1,24 @@
 #include "includes.h"
 #include "Interface.h"
 
+// --------------------------------------------------------------------------------
+// This project uses many things from Menool's HyperHook internal
+// Big shout out to this legend!!
+// https://www.unknowncheats.me/forum/battlefield-4-a/462540-x64-stealth-internal-hyperhook-source.html
+// --------------------------------------------------------------------------------
+
+
 // ClientGameContext* GameContext = (ClientGameContext*)*(DWORD*)(OFFSET_CLIENTGAMECONTEXT);
 
 HINSTANCE DLLHandle;
 
 bool threadRunningOK = true;
+
+#ifdef DEBUG
+bool debugMode = true;
+#else
+bool debugMode = false;
+#endif
 
 // -----------------------------------------------------------------
 // -----------------------------------------------------------------
@@ -18,9 +31,6 @@ DWORD __stdcall EjectThread(LPVOID lpParameter) {
 }
 
 void detach() {
-  /*ENABLE_AIMBOT = false;
-  DETACH_AIMBOT = true;*/
-
   Sleep(100);
 
   if (!Interface::ShutdownVisuals()) {
@@ -30,8 +40,8 @@ void detach() {
   return;
 }
 
-int WINAPI Main(HMODULE hModule) {
-  //Sleep(30000); // Wait for game initialization before hooking dx11 -- Uncomment before compiling release
+void WINAPI Main(HMODULE hModule) {
+  if (!debugMode) Sleep(30000); // Wait for game initialization before hooking dx11 in release mode
 
   if (!Interface::InitializeVisuals()) {
     threadRunningOK = false;
@@ -42,8 +52,8 @@ int WINAPI Main(HMODULE hModule) {
   while (threadRunningOK) {
     Sleep(50);
     if (GetAsyncKeyState(VK_INSERT) & 1) {
-      //show_menu = !show_menu;
-      while (GetAsyncKeyState(VK_NUMPAD1) & 1) {}
+      Interface::showMenu = !Interface::showMenu;
+      while (GetAsyncKeyState(VK_INSERT) & 1) {}
     }
     if (GetAsyncKeyState(VK_END) & 1) {
       break;
@@ -51,8 +61,6 @@ int WINAPI Main(HMODULE hModule) {
   }
 
   detach();
-
-  return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {

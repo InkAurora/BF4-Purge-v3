@@ -1,6 +1,5 @@
-#pragma once
-
 #include "Interface.h"
+#include "Cfg.h"
 
 typedef long(__stdcall* present)(IDXGISwapChain*, UINT, UINT);
 present p_present;
@@ -60,8 +59,8 @@ LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 string testText = "";
 
-bool show_menu = true;
-bool show_spectators = false;
+bool Interface::showMenu = true;
+bool Interface::showSpectators = false;
 
 bool init = false;
 HWND window = NULL;
@@ -94,15 +93,33 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  return p_present(p_swap_chain, sync_interval, flags);
   }
 
+  static auto pSSmoduleClass = (uintptr_t*)OFFSET_SSMODULE;
+  if (!IsValidPtr(pSSmoduleClass)) return p_present(p_swap_chain, sync_interval, flags);
+
+  //Simple PBSS bypass
+  auto ssRequest = (*(int*)(*pSSmoduleClass + 0x14) != -1);
+  if (ssRequest) return p_present(p_swap_chain, sync_interval, flags);
+
   ImGui_ImplDX11_NewFrame();
   ImGui_ImplWin32_NewFrame();
 
   ImGui::NewFrame();
 
-  if (show_menu) {
-	ImGui::Begin("BF4 Purge v2", &show_menu);
+  if (Interface::showMenu) {
+	ImGui::Begin("BF4 Purge v2", &Interface::showMenu);
 	ImGui::SetWindowSize(ImVec2(300, 500), ImGuiCond_Always);
 	ImGui::Text("Options:");
+	//ImGui::Text(Cfg::ESP::validPlayers.c_str());
+	ImGui::Checkbox("Enable ESP", &Cfg::ESP::enable);
+	ImGui::Checkbox("Show Teammates", &Cfg::ESP::team);
+	ImGui::Checkbox("3D Boxes", &Cfg::ESP::use3DplayerBox);
+	ImGui::Checkbox("ESP Vehicles", &Cfg::ESP::vehicles);
+	ImGui::Checkbox("3D Vehicle Boxes", &Cfg::ESP::use3DvehicleBox);
+	ImGui::Checkbox("ESP Explosives", &Cfg::ESP::explosives);
+	ImGui::Checkbox("ESP Lines", &Cfg::ESP::lines);
+	ImGui::Checkbox("ESP Vehicles Lines", &Cfg::ESP::linesVehicles);
+	ImGui::Checkbox("ESP Spectators", &Cfg::ESP::spectators);
+
 
 	ImGui::End();
   }
@@ -120,7 +137,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   ImGuiWindow* window = ImGui::GetCurrentWindow();
   ImDrawList* draw_list = window->DrawList;
 
-
+  Visuals::RenderVisuals();
 
   window->DrawList->PushClipRectFullScreen();
   ImGui::End();

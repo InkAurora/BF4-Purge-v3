@@ -40,6 +40,8 @@ typedef D3DXQUATERNION Quaternion;
 #define ZERO_VECTOR Vector( 0.f, 0.f, 0.f )
 #define ZERO_VECTOR2D Vector2D( 0.f, 0.f )
 
+#include "TypeInfo.h"
+
 //Thanks to: https://github.com/stevemk14ebr/PolyHook_2_0
 #ifdef _WIN64
 #define _PTR_MAX_VALUE ((PVOID)0x000F000000000000)
@@ -3360,7 +3362,7 @@ public:
   eastl::vector<Subscriber*> m_subscribers;
   void* m_turretComponent;
   boolean m_underExternalControl;
-  byte placeholder;
+  unsigned char placeholder;
   __int16 m_inputModifierCacheSize;
   //fb::EntryComponent::InputModifier* m_inputModifierCache;
 
