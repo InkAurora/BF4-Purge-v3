@@ -1060,7 +1060,6 @@ public:
   ClientSettings* m_pClientSettings; //0x0030 
   char _0x0038[8];
 
-  static ClientGameContext* GetGameContext();
 };//Size=0x0040
 
 class FileSystem {

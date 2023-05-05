@@ -1,5 +1,6 @@
 #include "Interface.h"
 #include "Cfg.h"
+#include "xorstr.hpp"
 
 typedef long(__stdcall* present)(IDXGISwapChain*, UINT, UINT);
 present p_present;
@@ -59,9 +60,6 @@ LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 string testText = "";
 
-bool Interface::showMenu = true;
-bool Interface::showSpectators = false;
-
 bool init = false;
 HWND window = NULL;
 ID3D11Device* p_device = NULL;
@@ -85,6 +83,29 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 
 	  ImGui::CreateContext();
 	  ImGuiIO& io = ImGui::GetIO();
+
+	  TCHAR windir[MAX_PATH];
+	  GetWindowsDirectory(windir, MAX_PATH);
+
+	  std::string fontDir = std::string(windir);
+	  fontDir += xorstr_("\\Fonts\\");
+
+	  auto LoadFontFromFile = [&io, &fontDir](const std::string& fontName, float size) -> ImFont* {
+		return io.Fonts->AddFontFromFileTTF((fontDir + fontName + ".ttf").c_str(), size);
+	  };
+
+	  auto LoadFontFromMemory = [&io, &fontDir](void* fontData, float size) -> ImFont* {
+		return io.Fonts->AddFontFromMemoryTTF(fontData, sizeof(fontData), size);
+	  };
+
+	  DX::Verdana8 = LoadFontFromFile(xorstr_("Verdana"), 8.f);
+	  DX::Verdana12 = LoadFontFromFile(xorstr_("Verdana"), 12.f);
+	  DX::Verdana18 = LoadFontFromFile(xorstr_("Verdana"), 18.f);
+	  DX::Verdana24 = LoadFontFromFile(xorstr_("Verdana"), 24.f);
+	  DX::Verdana48 = LoadFontFromFile(xorstr_("Verdana"), 48.f);
+
+	  io.FontDefault = DX::Verdana18;
+
 	  ImGui_ImplWin32_Init(window);
 	  ImGui_ImplDX11_Init(p_device, p_context);
 	  init = true;
@@ -100,13 +121,15 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   auto ssRequest = (*(int*)(*pSSmoduleClass + 0x14) != -1);
   if (ssRequest) return p_present(p_swap_chain, sync_interval, flags);
 
+  if (Hook::PreFrameUpdate() == -1) return p_present(p_swap_chain, sync_interval, flags);
+
   ImGui_ImplDX11_NewFrame();
   ImGui_ImplWin32_NewFrame();
 
   ImGui::NewFrame();
 
-  if (Interface::showMenu) {
-	ImGui::Begin("BF4 Purge v2", &Interface::showMenu);
+  if (G::isMenuVisible) {
+	ImGui::Begin("BF4 Purge v3", &G::isMenuVisible);
 	ImGui::SetWindowSize(ImVec2(300, 500), ImGuiCond_Always);
 	ImGui::Text("Options:");
 	//ImGui::Text(Cfg::ESP::validPlayers.c_str());
@@ -117,8 +140,11 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::Checkbox("3D Vehicle Boxes", &Cfg::ESP::use3DvehicleBox);
 	ImGui::Checkbox("ESP Explosives", &Cfg::ESP::explosives);
 	ImGui::Checkbox("ESP Lines", &Cfg::ESP::lines);
+	ImGui::Checkbox("ESP Lines Allies", &Cfg::ESP::alliesLines);
 	ImGui::Checkbox("ESP Vehicles Lines", &Cfg::ESP::linesVehicles);
 	ImGui::Checkbox("ESP Spectators", &Cfg::ESP::spectators);
+	ImGui::Checkbox("Aimbot", &Cfg::AimBot::enable);
+	ImGui::Checkbox("Radar", &Cfg::ESP::Radar::enable);
 
 
 	ImGui::End();

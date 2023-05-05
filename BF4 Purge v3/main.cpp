@@ -52,7 +52,7 @@ void WINAPI Main(HMODULE hModule) {
   while (threadRunningOK) {
     Sleep(50);
     if (GetAsyncKeyState(VK_INSERT) & 1) {
-      Interface::showMenu = !Interface::showMenu;
+      G::isMenuVisible = !G::isMenuVisible;
       while (GetAsyncKeyState(VK_INSERT) & 1) {}
     }
     if (GetAsyncKeyState(VK_END) & 1) {

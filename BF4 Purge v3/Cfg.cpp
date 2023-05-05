@@ -25,6 +25,7 @@ namespace Cfg {
 	float _internalCurvePredTimeMultiplier = 69.0f;
 
 	bool lines = false;
+	bool alliesLines = false;
 	bool linesVehicles = false;
 	bool vehicleIndicator = true;
 
@@ -83,5 +84,30 @@ namespace Cfg {
 	bool useTVPrediction = false;
 
 	float TEST = 0.7f;
+  }
+
+  namespace DBG {
+	bool vehicleCross = true;
+	bool spectators = false;
+	bool overlayBorder = false;
+	bool console = true;
+	bool watermark = true;
+	bool debugOutput = false;
+	bool debugEntities = false;
+	bool jetSpeedCtrl = true;
+
+	bool dbgMode = false;
+	float dbgPos[3] = { 0.0f, 0.0f, 0.0f };
+
+	std::array<Vector, 16> _internalPredictionCurve;
+	Quaternion _internalPredictedOrientation;
+	bool _internalUseCurve = false;
+
+	unsigned int _internalFFSS = 0;
+
+	bool _internalSpoof = false;
+	bool _internalRestore = false;
+	char _internalName[16];
+	char spoofedName[16];
   }
 }

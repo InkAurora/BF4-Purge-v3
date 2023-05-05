@@ -14,20 +14,11 @@ ClientPlayer* PlayerManager::GetLocalPlayer() {
   return m_pLocalPlayer;
 }
 
-ClientGameContext* Client::GetGameContext() {
-  if (IsValidPtr(Main::GetInstance())
-    && IsValidPtr(Main::GetInstance()->m_pClient)
-    && IsValidPtr(Main::GetInstance()->m_pClient->m_pGameContext))
-    return Main::GetInstance()->m_pClient->m_pGameContext;
-  return nullptr;
-}
-
 PlayerManager* PlayerManager::GetInstance() {
-  if (IsValidPtr(Main::GetInstance())
-    && IsValidPtr(Main::GetInstance()->m_pClient)
-    && IsValidPtr(Main::GetInstance()->m_pClient->m_pGameContext)
-    && IsValidPtr(Main::GetInstance()->m_pClient->m_pGameContext->m_pPlayerManager))
-    return Main::GetInstance()->m_pClient->m_pGameContext->m_pPlayerManager;
+  if (ClientGameContext* pGameCtx = ClientGameContext::GetInstance();
+    IsValidPtr(pGameCtx) &&
+    IsValidPtr(pGameCtx->m_pPlayerManager))
+    return pGameCtx->m_pPlayerManager;
   return nullptr;
 }
 

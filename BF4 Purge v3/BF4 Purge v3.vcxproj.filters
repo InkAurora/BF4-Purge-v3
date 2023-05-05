@@ -82,6 +82,21 @@
     <ClCompile Include="Cfg.cpp">
       <Filter>Features</Filter>
     </ClCompile>
+    <ClCompile Include="Misc.cpp">
+      <Filter>Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="PreFrameUpdate.cpp">
+      <Filter>Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityPrediction.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="InputActions.cpp">
+      <Filter>Features</Filter>
+    </ClCompile>
+    <ClCompile Include="quartic.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MinHook\MinHook.h">
@@ -143,6 +158,21 @@
     </ClInclude>
     <ClInclude Include="Cfg.h">
       <Filter>Features</Filter>
+    </ClInclude>
+    <ClInclude Include="Misc.h">
+      <Filter>Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="PreFrameUpdate.h">
+      <Filter>Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityPrediction.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="InputActions.h">
+      <Filter>Features</Filter>
+    </ClInclude>
+    <ClInclude Include="quartic.h">
+      <Filter>Math</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

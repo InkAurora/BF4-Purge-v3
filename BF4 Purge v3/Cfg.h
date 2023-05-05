@@ -2,6 +2,7 @@
 
 #include "imgui.h"
 #include "Engine.h"
+#include <array>
 #include <vector>
 #include <string>
 
@@ -22,6 +23,7 @@ namespace Cfg {
 	extern bool predictionUseAngularVelocity;
 
 	extern bool lines;
+	extern bool alliesLines;
 	extern bool linesVehicles;
 	extern bool use3DvehicleBox;
 	extern bool vehicleCenter;
@@ -84,5 +86,31 @@ namespace Cfg {
 	extern bool useTVPrediction;
 
 	extern float TEST;
+  }
+
+  namespace DBG {
+	extern bool vehicleCross;
+	extern bool spectators;
+	extern bool overlayBorder;
+	extern bool console;
+	extern bool watermark;
+	extern bool debugOutput;
+	extern bool debugEntities;
+	extern bool jetSpeedCtrl;
+
+	extern bool dbgMode;
+	extern float dbgPos[3];
+
+	extern bool _internalSpoof;
+	extern bool _internalRestore;
+	extern char _internalName[16];
+
+	extern std::array<Vector, 16> _internalPredictionCurve;
+	extern Quaternion _internalPredictedOrientation;
+	extern bool _internalUseCurve;
+
+	extern unsigned int _internalFFSS;
+
+	extern char spoofedName[16];
   }
 }

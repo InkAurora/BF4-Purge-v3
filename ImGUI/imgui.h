@@ -263,6 +263,7 @@ struct ImVec2
     ImVec2 operator- (int v) { return { x - v, y - v }; }
     ImVec2 operator= (const D3DXVECTOR2& v) { x = v.x; y = v.y; return { x, y }; }
     bool   operator==(const D3DXVECTOR2& v) { return x == v.x && y == v.y; }
+    //bool   operator!=(const ImVec2& v) { return !(x == v.x && y == v.y); }
     bool   operator!=(const D3DXVECTOR2& v) { return !(*this == v); }
     float  operator[] (size_t idx) const    { IM_ASSERT(idx <= 1); return (&x)[idx]; }    // We very rarely use this [] operator, the assert overhead is fine.
     float& operator[] (size_t idx)          { IM_ASSERT(idx <= 1); return (&x)[idx]; }    // We very rarely use this [] operator, the assert overhead is fine.

@@ -247,6 +247,61 @@ BoundingBox Visuals::GetEntityAABB(ClientControllableEntity* pEntity, BoundingBo
   return BoundingBox(left, bottom, right, top);
 }
 
+VeniceClientMissileEntity* Visuals::GetMissileEntity(ClientGameContext* pCtx, ClientPlayer* pLocal) {
+  if (!IsValidPtr(pCtx->m_pLevel) || !IsValidPtr(pCtx->m_pLevel->m_pGameWorld)) return nullptr;
+
+  auto* pGameWorld = pCtx->m_pLevel->m_pGameWorld;
+  if (!IsValidPtr(pGameWorld)) return nullptr;
+
+  if (ClassInfos.MissileEntity) {
+	EntityIterator<VeniceClientMissileEntity> missiles(pGameWorld, ClassInfos.MissileEntity);
+	VeniceClientMissileEntity* pMyMissile = nullptr;
+
+	//Finding own missile
+	if (missiles.front()) {
+	  do {
+		if (auto* pMissile = missiles.front()->getObject(); IsValidPtr(pMissile)) {
+		  if (pMissile->m_pOwner.GetData() == pLocal) {
+			pMyMissile = pMissile;
+			break;
+		  }
+		}
+
+	  } while (missiles.next());
+	}
+
+	if (!IsValidPtr(pMyMissile)) return nullptr;
+	if (!IsValidPtr(pMyMissile->m_pMissileEntityData)) return nullptr;
+
+	if (pMyMissile->m_pMissileEntityData->IsLockable()) return nullptr;
+
+	const bool isLG = pMyMissile->m_pMissileEntityData->IsLaserGuided();
+
+	if (Cfg::ESP::ownMissile && isLG) {
+	  const auto& missileBB = GetEntityAABB((ClientControllableEntity*)pMyMissile);
+	  ImVec2 scrn = missileBB.GetMin() + missileBB.GetCenter();
+
+	  std::vector<ImVec2> points =
+	  {
+		  ImVec2(scrn.x, scrn.y - 5),
+		  ImVec2(scrn.x + 5, scrn.y),
+		  ImVec2(scrn.x, scrn.y + 5),
+		  ImVec2(scrn.x - 5, scrn.y),
+		  ImVec2(scrn.x, scrn.y - 5),
+	  };
+
+	  auto fill = Cfg::ESP::missileColor;
+	  fill.Value.w = std::clamp(Cfg::ESP::missileColor.Value.w - 0.5f, 0.0f, 1.0f);
+	  ImGui::GetForegroundDrawList()->AddConvexPolyFilled(points.data(), points.size(), fill);
+	  Renderer::DrawLine(points, Cfg::ESP::missileColor);
+
+	}
+
+	return pMyMissile;
+  }
+  return nullptr;
+}
+
 void Visuals::RenderPlayerCorneredRect(const BoundingBox& bbEntity, const ImColor& color) {
   BoundingBox bb = bbEntity;
 
@@ -342,14 +397,245 @@ void Visuals::RenderPlayerCorneredRect(const BoundingBox& bbEntity, const ImColo
   Renderer::DrawLine(ImVec2(bb.GetMin().x, bb.GetMax().y - height), bb.GetMinBot(), cFG);
 }
 
+void Visuals::RenderAimPoint(const PredictionData_s& data, ClientPlayer* pTargetData) {
+  ImVec2 predAimPoint, currPos;
+#ifndef AIMPOINT_DBG
+  if (!WorldToScreen(data.hitPos, predAimPoint)) return;
+  WorldToScreen(data.origin, currPos);
+#endif
+
+#ifdef AIMPOINT_DBG
+  predAimPoint = { 200, 400 };
+  currPos = { 269, 600 };
+#endif
+
+  ImVec2 lastCurvePoint;
+  if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0) {
+	const auto& points = Cfg::DBG::_internalPredictionCurve;
+	auto colorDelta = 255 / points.size();
+	for (int i = 0; i < Cfg::ESP::_internalCurveIterationCount - 1; i++) {
+	  ImVec2 screen, screen2;
+	  if (WorldToScreen(points.at(i), screen) && WorldToScreen(points.at(i + 1), screen2)) {
+		auto color = ImColor(255 - (colorDelta * i), 0 + (colorDelta * i), 128);
+		ImGui::GetBackgroundDrawList()->AddLine(screen, screen2, ImColor::Black(255 * Cfg::ESP::predictionCrossColor.Value.w), 2.0f);
+		Renderer::DrawLine(screen, screen2, color);
+		lastCurvePoint = screen2;
+	  }
+	}
+
+	if (IsValidPtr(pTargetData) && !pTargetData->InVehicle()) lastCurvePoint = currPos;
+  }
+  else lastCurvePoint = currPos;
+
+  Vector2D crossDelta;
+  Vector2D tmp = { predAimPoint.x, predAimPoint.y };
+  D3DXVec2Subtract(&crossDelta, &G::viewPos2D, &tmp);
+
+  const ImVec2& p1 = predAimPoint;
+  const ImVec2& p2 = lastCurvePoint;
+
+  float angle;
+  auto v = ImVec2(p2.x - p1.x, p2.y - p1.y);
+
+  const float a = fabsf(p2.y - p1.y);
+  const float b = fabsf(p2.x - p1.x);
+  const float c = sqrtf((v.x * v.x) + (v.y * v.y));
+  const auto& rad = Cfg::ESP::predictionCrossRadius;
+  static constexpr float quarterPI = D3DXToRadian(90.f);
+
+  if (c > rad) {
+	//Cancer way of rotating point around the circle...
+	if (p2.y <= p1.y) {
+	  if (p2.x >= p1.x) angle = asinf(a / c);
+	  else angle = acosf(a / c) + quarterPI;
+	}
+	else {
+	  if (p2.x <= p1.x) angle = acosf(b / c) + 2 * quarterPI;
+	  else angle = asinf(b / c) + 3 * quarterPI;
+	}
+
+	ImVec2 point =
+	{
+		p1.x + (rad * cosf(-angle)),
+		p1.y + (rad * sinf(-angle))
+	};
+
+	ImGui::GetBackgroundDrawList()->AddLine(point, lastCurvePoint, ImColor::Black(255 * Cfg::ESP::predictionCrossColor.Value.w), 2.0f);
+	Renderer::DrawLine(point, lastCurvePoint, Cfg::ESP::predictionCrossColor);
+	Renderer::DrawCircleFilled(lastCurvePoint, 2, 0, Cfg::ESP::predictionCrossColor);
+  }
+
+  const bool release = D3DXVec2Length(&crossDelta) <= rad;
+  ImColor crossColor = release ? Cfg::ESP::predictionCrossOverrideColor : Cfg::ESP::predictionCrossColor;
+
+  if (pTargetData) {
+	float maxHp = 0.0f, currHp = 0.0f;
+	if (auto pVeh = pTargetData->GetClientVehicleEntity(); pTargetData->InVehicle() && IsValidPtr(pVeh) && IsValidPtr(pVeh->m_pData) && IsValidPtr(pVeh->m_pHealthComp)) {
+	  maxHp = pVeh->m_pHealthComp->m_MaxHealth;
+	  currHp = pVeh->m_pHealthComp->m_VehicleHealth;
+	}
+	else if (auto pSold = pTargetData->GetSoldierEntity(); IsValidPtr(pSold) && IsValidPtr(pSold->m_pHealthComp)) {
+	  maxHp = pSold->m_pHealthComp->m_MaxHealth;
+	  currHp = pSold->m_pHealthComp->m_Health;
+	}
+
+	currHp = std::clamp(currHp, 0.0f, maxHp);
+	const auto percHp = (currHp * maxHp) / 100.f;
+
+	if (percHp < 100.f && percHp > 0.f) {
+	  auto hpCol = Cfg::ESP::predictionCrossColor(190);
+	  BoundingBox bbHp = { { p1.x - rad, p1.y - rad - 20.f }, { p1.x + rad, p1.y - rad - 16.f } };
+
+	  Renderer::DrawRectFilled(bbHp.GetMin(), { bbHp.GetMax().x + 2, bbHp.GetMax().y + 1 }, ImColor::Black(120));
+	  Renderer::DrawRectFilled(
+		bbHp.GetMin() + 1.f,
+		{ bbHp.GetMin().x + 1.f + (currHp * bbHp.GetSize().x / maxHp), bbHp.GetMax().y },
+		hpCol);
+	}
+  }
+
+  ImVec2 lastPoint[2];
+  Renderer::DrawCircleFilled(p1, rad, 25, ImColor::Black(50));
+  Renderer::DrawCircle(p1, 2, 25, crossColor);
+  Renderer::DrawCircleOutlined(p1, rad, 25, crossColor);
+  Renderer::DrawCircleProgressBar(p1, rad - 2, 25, data.travelTime, 4.f, crossColor, 1.0f, false, lastPoint);
+  Renderer::DrawLine(lastPoint[1], lastPoint[0], crossColor);
+
+  //Cross
+  ImGui::GetBackgroundDrawList()->AddLine({ p1.x - 20, p1.y }, { p1.x - rad, p1.y }, ImColor::Black(255 * Cfg::ESP::predictionCrossColor.Value.w), 2.0f);
+  ImGui::GetBackgroundDrawList()->AddLine({ p1.x + rad, p1.y }, { p1.x + 20, p1.y }, ImColor::Black(255 * Cfg::ESP::predictionCrossColor.Value.w), 2.0f);
+  ImGui::GetBackgroundDrawList()->AddLine({ p1.x, p1.y - rad }, { p1.x, p1.y - 20 }, ImColor::Black(255 * Cfg::ESP::predictionCrossColor.Value.w), 2.0f);
+  ImGui::GetBackgroundDrawList()->AddLine({ p1.x, p1.y + rad }, { p1.x, p1.y + 20 }, ImColor::Black(255 * Cfg::ESP::predictionCrossColor.Value.w), 2.0f);
+
+  Renderer::DrawLine({ p1.x - 20, p1.y }, { p1.x - rad, p1.y }, crossColor);
+  Renderer::DrawLine({ p1.x + rad, p1.y }, { p1.x + 20, p1.y }, crossColor);
+  Renderer::DrawLine({ p1.x, p1.y - rad }, { p1.x, p1.y - 20 }, crossColor);
+  Renderer::DrawLine({ p1.x, p1.y + rad }, { p1.x, p1.y + 20 }, crossColor);
+
+  if (Cfg::ESP::predictionImpactData) {
+	ImGui::PushFont(DX::Verdana8);
+	Renderer::DrawString({ p1.x + 30, p1.y - 13 }, 0, Cfg::ESP::predictionDataColor, xorstr_("T: %.1fs."), data.travelTime);
+	Renderer::DrawString({ p1.x + 30, p1.y - 4 }, 0, Cfg::ESP::predictionDataColor, xorstr_("D: %dm."), (int)data.distance);
+	Renderer::DrawString({ p1.x + 30, p1.y + 5 }, 0, Cfg::ESP::predictionDataColor, xorstr_("V: %dm/s."), (int)data.bulletVel);
+	ImGui::PopFont();
+  }
+
+  if (targetLock) {
+	Renderer::DrawString({ p1.x - 32, p1.y - 2 }, StringFlag::RIGHT_X | StringFlag::CENTER_Y, ImColor::Black(), xorstr_("LOCKED"));
+	Renderer::DrawString({ p1.x - 30, p1.y }, StringFlag::RIGHT_X | StringFlag::CENTER_Y, ImColor(223, 32, 32), xorstr_("LOCKED"));
+  }
+}
+
+void Visuals::RenderBombImpact(const Vector& targetPos, WeaponData_s* pDataIn) {
+  if (Cfg::ESP::predictionBombImpact && IsValidPtr(pDataIn)) {
+	if (pDataIn->isValid) {
+	  if (pDataIn->gravity == 0.0f && pDataIn->speed.z == 0.0f) {
+		auto pBomb = reinterpret_cast<ClientIndirectFireWeapon*>(pDataIn->pWeapon);
+		if (IsValidPtr(pBomb)) {
+		  auto impactPos = Vector(pBomb->landingpos.x, pBomb->landingpos.y, pBomb->landingpos.z);
+		  bool inRange = false;
+
+		  if (targetPos != ZERO_VECTOR)
+			inRange = Misc::Distance2D(Vector2D(targetPos.x, targetPos.z), Vector2D(impactPos.x, impactPos.z)) <= 5.f;;
+
+		  ImVec2 impactPos2D, target2D;
+		  WorldToScreen(impactPos, impactPos2D);
+
+		  if (inRange) {
+			Renderer::DrawString({ impactPos2D.x, impactPos2D.y - Cfg::ESP::predictionCrossRadius - 10.f },
+			  StringFlag::CENTER_X, ImColor::Black(), xorstr_("DROP NOW!"));
+			Renderer::DrawString({ impactPos2D.x + 1, impactPos2D.y - Cfg::ESP::predictionCrossRadius - 9.f },
+			  StringFlag::CENTER_X, ImColor::Red(), xorstr_("DROP NOW!"));
+		  }
+
+		  Renderer::DrawCircleFilled(impactPos2D, Cfg::ESP::predictionCrossRadius, 0,
+			inRange ? ImColor::Green(120) : ImColor::Red(120));
+		  Renderer::DrawCircleOutlined(impactPos2D, Cfg::ESP::predictionCrossRadius, 0, ImColor::White(120));
+
+		  if (targetPos != ZERO_VECTOR) {
+			WorldToScreen(targetPos, target2D);
+
+			if (target2D != ImVec2(0, 0))
+			  Renderer::DrawLine(impactPos2D, target2D, ImColor::Green(120));
+		  }
+		}
+	  }
+	}
+  }
+}
+
+void Visuals::RenderExplosives(ClientGameContext* pCtx) {
+  if (!IsValidPtr(pCtx->m_pLevel) || !IsValidPtr(pCtx->m_pLevel->m_pGameWorld)) return;
+
+  ClientGameWorld* pGameWorld = pCtx->m_pLevel->m_pGameWorld;
+  if (!IsValidPtr(pGameWorld)) return;
+
+  if (ClassInfos.MissileEntity) {
+	EntityIterator<ClientExplosionEntity> explosives(pGameWorld, ClassInfos.ExplosionEntity);
+
+	if (explosives.front()) {
+	  do {
+		if (auto* pExplosives = explosives.front()->getObject(); IsValidPtr(pExplosives)) {
+		  BoundingBox3D explosivesAABB3D;
+		  GetEntityAABB((ClientControllableEntity*)pExplosives, &explosivesAABB3D);
+		  std::array<ImVec2, 8> points2D;
+
+		  bool valid = true;
+		  for (int i = 0; i < 8; i++) {
+			if (!WorldToScreen(explosivesAABB3D.points[i], points2D[i])) {
+			  valid = false;
+			  break;
+			}
+		  }
+		  if (valid) Renderer::DrawBox(points2D, Cfg::ESP::explosivesColor);
+
+		}
+
+	  } while (explosives.next());
+	}
+  }
+}
+
+void Visuals::RenderPlayerHealth(const BoundingBox& bbEntity) {
+  //TODO:
+}
+
 void Visuals::RenderVisuals() {
   if (!Cfg::ESP::enable) return;
+
+  ClientGameContext* pGameCtx = ClientGameContext::GetInstance();
 
   PlayerManager* pPlayerMgr = PlayerManager::GetInstance();
 
   ClientPlayer* pLocal = pPlayerMgr->GetLocalPlayer();
 
-  if (!IsValidPtr(pLocal)) return;
+  // Prevent crashes when leaving the server or loading
+  if (auto* pLocalSoldier = pLocal->GetSoldierEntity();
+	!IsValidPtr(pLocal) ||
+	!IsValidPtr(pLocalSoldier) ||
+	!pLocalSoldier->IsAlive()) return;
+
+  if (auto pVehicleTurret = VehicleTurret::GetInstance(); IsValidPtr(pVehicleTurret) && pLocal->InVehicle()) {
+	G::viewPos = pVehicleTurret->GetVehicleCameraOrigin();
+	WorldToScreen(pVehicleTurret->GetVehicleCrosshair(), G::viewPos2D);
+  }
+
+  auto pMyMissile = GetMissileEntity(pGameCtx, pLocal);
+  if (Cfg::ESP::explosives)
+	RenderExplosives(pGameCtx);
+
+  if (Cfg::DBG::vehicleCross && pLocal->InVehicle()) {
+	static auto prevPos = G::viewPos2D;
+	auto delta = Misc::GetAbsDeltaAtGivenPoints(G::viewPos2D, prevPos);
+	if (delta > 3) {
+	  Vector2D d = G::viewPos2D - prevPos;
+	  prevPos += d / 6.f;
+	}
+	else { prevPos = G::viewPos2D; }
+
+	Renderer::DrawCircleOutlined(prevPos, 5, 15, ImColor::Red());
+	Renderer::DrawRectFilled(prevPos, { prevPos.x + 1.f, prevPos.y + 1.f }, ImColor::Red());
+  }
 
   static ClientPlayer* pTargetPlayer = nullptr;
   static Vector			  aimPoint3D = ZERO_VECTOR;
@@ -365,7 +651,7 @@ void Visuals::RenderVisuals() {
 
   float count = 0.0f;
 
-  Cfg::ESP::validPlayers = "";
+  //Cfg::ESP::validPlayers = "";
 
   for (int i = 0; i < 70; i++) {
 
@@ -377,7 +663,7 @@ void Visuals::RenderVisuals() {
 
 	if (pPlayer == pLocal) continue;
 
-	Cfg::ESP::validPlayers += to_string(i) + ", ";
+	//Cfg::ESP::validPlayers += to_string(i) + ", ";
 
 	bool isInTeam = pPlayer->m_TeamId == pLocal->m_TeamId;
 	if (!Cfg::ESP::team && isInTeam) continue;
@@ -423,9 +709,9 @@ void Visuals::RenderVisuals() {
 		}
 		else RenderPlayerCorneredRect(playerBB, color);
 
-		if (Cfg::ESP::lines)
+		if (Cfg::ESP::lines && (Cfg::ESP::alliesLines == isInTeam || !isInTeam))
 		  Renderer::DrawLine(
-			{ 2560 * 0.5f, 1080 },
+			{ G::screenSize.x * 0.5f, G::screenSize.y },
 			{ playerBB.left + (playerBB.GetSize().x * 0.5f), playerBB.bot },
 			Cfg::ESP::linesColor);
 	  }
@@ -484,11 +770,11 @@ void Visuals::RenderVisuals() {
 		}
 		else RenderPlayerCorneredRect(vehicleBB, color);
 
-		if (Cfg::ESP::linesVehicles) {
+		if (Cfg::ESP::linesVehicles && (Cfg::ESP::alliesLines == isInTeam || !isInTeam)) {
 		  ImVec2 boxCenter = { vehicleBB.GetMin().x + vehicleBB.GetCenter().x, vehicleBB.GetMax().y };
 		  if (boxCenter != ZERO_VECTOR2D)
 			Renderer::DrawLine(
-			  { 2560 * 0.5f, 1080 },
+			  { G::screenSize.x * 0.5f, G::screenSize.y },
 			  boxCenter,
 			  color);
 		}
@@ -496,14 +782,94 @@ void Visuals::RenderVisuals() {
 		  ImVec2 boxCenter = { vehicleBB.GetMin().x + vehicleBB.GetCenter().x, vehicleBB.GetMax().y };
 		  if (boxCenter != ZERO_VECTOR2D)
 			Renderer::DrawLine(
-			  { 2560 * 0.5f, 1080 * 0.5f },
+			  { G::screenSize.x * 0.5f, G::screenSize.y * 0.5f },
 			  boxCenter,
 			  targetID == i ? ImColor::White(180) : color);
 		}
 	  }
 	}
 
+	Vector tmpAimPoint3D = ZERO_VECTOR;
+	auto pRagdoll = pSoldier->m_pRagdollComponent;
+
+	//Check if we can grab players head position 
+	if (!IsValidPtr(pRagdoll) || !pRagdoll->GetBone(UpdatePoseResultData::BONES::Head, tmpAimPoint3D)) {
+	  //If not, try to get vehicle AABB center at least.
+	  if (pPlayer->InVehicle()) {
+		tmpAimPoint3D = vehicleBB3D.GetCenter();
+		ImVec2 o;
+		if (WorldToScreen(tmpAimPoint3D, o)) {
+		  std::vector<ImVec2> points =
+		  {
+			  ImVec2(o.x, o.y - 5),
+			  ImVec2(o.x + 5, o.y),
+			  ImVec2(o.x, o.y + 5),
+			  ImVec2(o.x - 5, o.y),
+			  ImVec2(o.x, o.y - 5),
+		  };
+
+		  Renderer::DrawLine(points, Cfg::ESP::predictionCrossColor);
+		}
+	  }
+	}
+
+	if (tmpAimPoint3D == ZERO_VECTOR) continue;
+
+	//if (!isInTeam) RenderPlayerNames(pPlayer); //TODO;
+
+	Vector2D aimPoint2D;
+	WorldToScreen(tmpAimPoint3D, aimPoint2D);
+	const auto delta = Misc::GetAbsDeltaAtGivenPoints(G::screenCenter, aimPoint2D);
+
+	//Search for closest player to center of the screen
+	if (!targetLock) {
+	  if (delta < longestDelta && !isInTeam) {
+		longestDelta = delta;
+		pTargetPlayer = pPlayer;
+		aimPoint3D = tmpAimPoint3D;
+		targetID = i;
+	  }
+	}
+	else if (IsValidPtr(pPlayer) && (i == targetID))
+	  aimPoint3D = tmpAimPoint3D;
   }
 
-  return;
+  RenderBombImpact(aimPoint3D, &PreUpdate::weaponData);
+
+  if (!IsValidPtr(pTargetPlayer)
+	|| !IsValidPtr(pLocal)
+	|| !IsValidPtr(pTargetPlayer->GetSoldierEntity())
+	|| !pTargetPlayer->GetSoldierEntity()->IsAlive()) {
+	targetLock = false;
+	if (!targetLock) {
+	  pTargetPlayer = nullptr;
+	  aimPoint3D = ZERO_VECTOR;
+	  longestDelta = FLT_MAX;
+	  targetID = -1;
+
+	}
+	return;
+  }
+
+  auto& preUpd = PreUpdate::preUpdatePlayersData;
+  preUpd.pBestTarget = pTargetPlayer;
+  preUpd.pMyMissile = pMyMissile;
+
+  if (PreUpdate::predictionData.hitPos == ZERO_VECTOR || !PreUpdate::isPredicted) return;
+
+  RenderAimPoint(PreUpdate::predictionData, pTargetPlayer);
+
+  //Draws target's predicted AABB when flying in jet
+  if (!PreUpdate::isValid) return;
+
+  std::array<ImVec2, 8> pts;
+  bool isValid = true;
+  for (int i = 0; i < pts.size(); i++) {
+	if (!WorldToScreen(PreUpdate::points[i], pts[i])) {
+	  isValid = false;
+	  break;
+	}
+  }
+
+  if (isValid) Renderer::DrawBox(pts, ImColor::Green(90));
 }
