@@ -98,8 +98,15 @@ namespace Cfg {
 	extern bool debugEntities;
 	extern bool jetSpeedCtrl;
 
+	extern bool disableSpread;
+	extern bool isSpreadDisabled;
+	extern bool disableRecoil;
+	extern bool isRecoilDisabled;
+
 	extern bool dbgMode;
 	extern float dbgPos[3];
+
+	extern bool performanceTest;
 
 	extern bool _internalSpoof;
 	extern bool _internalRestore;

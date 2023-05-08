@@ -53,5 +53,8 @@ int Hook::PreFrameUpdate() {
   InputActions::Get()->HandleInput(
 	PreUpdate::predictionData.hitPos, pLocal, PreUpdate::weaponData, aimPoint, d.pMyMissile);
 
+  Features::Recoil(Cfg::DBG::disableRecoil);
+  Features::Spread(Cfg::DBG::disableSpread);
+
   return 0;
 }

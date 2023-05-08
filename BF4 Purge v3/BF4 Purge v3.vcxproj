@@ -152,7 +152,6 @@
     <ClCompile Include="..\ImGUI\imgui_impl_win32.cpp" />
     <ClCompile Include="..\ImGUI\imgui_tables.cpp" />
     <ClCompile Include="..\ImGUI\imgui_widgets.cpp" />
-    <ClCompile Include="Aimbot.cpp" />
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="Cfg.cpp" />
     <ClCompile Include="Engine.cpp" />
@@ -162,6 +161,7 @@
     <ClCompile Include="Interface.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Misc.cpp" />
+    <ClCompile Include="MiscFeatures.cpp" />
     <ClCompile Include="PreFrameUpdate.cpp" />
     <ClCompile Include="quartic.cpp" />
     <ClCompile Include="Renderer.cpp" />
@@ -178,7 +178,6 @@
     <ClInclude Include="..\ImGUI\imstb_textedit.h" />
     <ClInclude Include="..\ImGUI\imstb_truetype.h" />
     <ClInclude Include="..\MinHook\MinHook.h" />
-    <ClInclude Include="Aimbot.h" />
     <ClInclude Include="BoundingBox.h" />
     <ClInclude Include="Cfg.h" />
     <ClInclude Include="Engine.h" />
@@ -188,6 +187,7 @@
     <ClInclude Include="InputActions.h" />
     <ClInclude Include="Interface.h" />
     <ClInclude Include="Misc.h" />
+    <ClInclude Include="MiscFeatures.h" />
     <ClInclude Include="PreFrameUpdate.h" />
     <ClInclude Include="quartic.h" />
     <ClInclude Include="Renderer.h" />

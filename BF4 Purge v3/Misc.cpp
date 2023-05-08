@@ -296,3 +296,35 @@ float Misc::Distance2D(const D3DXVECTOR2& src, const D3DXVECTOR2& dst) {
   D3DXVec2Subtract(&ret, &src, &dst);
   return D3DXVec2Length(&ret);
 }
+
+void Misc::ReadBytes(DWORD64 address, void* destination, SIZE_T size) {
+  memcpy(destination, (void*)address, size);
+}
+
+void Misc::WriteBytes(DWORD64 address, void* bytes, SIZE_T size) {
+  DWORD protect;
+  VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &protect);
+  memcpy((void*)address, &bytes, size);
+  VirtualProtect((LPVOID)address, size, protect, &protect);
+}
+
+DWORD64 Misc::GetFunctionCallAddress(DWORD64 baseAddress, DWORD64 functionAddress) {
+  DWORD64 bytes = 0x00;
+  bytes += 0xE8;
+  DWORD64 sub = functionAddress - baseAddress - 0x5;
+  bytes += sub << 8 & 0xff00;
+  bytes += sub << 8 & 0xff0000;
+  bytes += sub << 8 & 0xff000000;
+  bytes += sub << 8 & 0xff00000000;
+  return bytes;
+}
+
+DWORD64 Misc::ByteToMem(DWORD64 byte, SIZE_T size) {
+  DWORD64 mem = 0x00;
+  for (__int64 i = 0; i < size; i++) {
+	mem = mem << 8;
+	mem += byte >> (i * 8) & 0xff;
+  }
+
+  return mem;
+}

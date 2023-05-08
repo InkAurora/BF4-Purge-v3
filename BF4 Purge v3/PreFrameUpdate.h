@@ -5,6 +5,7 @@
 #include "Globals.h"
 #include "EntityPrediction.h"
 #include "InputActions.h"
+#include "MiscFeatures.h"
 
 class Hook {
 public:

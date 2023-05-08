@@ -9,7 +9,7 @@ namespace DX {
 }
 
 namespace G {
-  bool			isMenuVisible = true;
+  bool			isMenuVisible = false;
   bool			shouldExit = false;
   ImVec2		screenSize = { -1, -1 };
   ImVec2		screenCenter = { -1, -1 };
@@ -29,4 +29,5 @@ namespace PreUpdate {
 
   bool isValid;
   bool isPredicted;
+  double perf = 0;
 }

@@ -68,4 +68,12 @@ public:
   static float Distance3D(const D3DXVECTOR3& src, const D3DXVECTOR3& dst);
 
   static float Distance2D(const D3DXVECTOR2& src, const D3DXVECTOR2& dst);
+
+  static void ReadBytes(DWORD64 address, void* destination, SIZE_T size);
+
+  static void WriteBytes(DWORD64 address, void* bytes, SIZE_T size);
+
+  static DWORD64 GetFunctionCallAddress(DWORD64 baseAddress, DWORD64 functionAddress);
+
+  static DWORD64 ByteToMem(DWORD64 byte, SIZE_T size);
 };

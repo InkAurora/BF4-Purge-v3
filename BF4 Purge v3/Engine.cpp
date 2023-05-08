@@ -24,7 +24,7 @@ PlayerManager* PlayerManager::GetInstance() {
 
 bool ClientPlayer::InVehicle() {
   //Weird fix but at least its not crashing here anymore..
-  if (!IsValidPtr(this)) return false;
+  if (IsBadPtr((intptr_t*)this)) return false;
   return InVehicleFn();
 }
 
@@ -45,7 +45,7 @@ bool ClientPlayer::GetCurrentWeaponData(WeaponData_s* pDataOut) {
   //game crashes (mostly when entering the vehicle).
   //You could implemend some kind of timer and delay it when entering the vehicle but yeah, its lame.
 
-  if (!IsValidPtr(pWeaponFiring->m_pPrimaryFire) || ((uintptr_t)(pWeaponFiring->m_pPrimaryFire) == 0x10F00000030)) return false;
+  if (IsBadPtr((intptr_t*)pWeaponFiring->m_pPrimaryFire) || ((uintptr_t)(pWeaponFiring->m_pPrimaryFire) == 0x10F00000030)) return false;
 
   auto pFiringData = pWeaponFiring->m_pPrimaryFire->m_FiringData;	// <--- Sometimes crash occurs here as well without any information from debugger.
 

@@ -61,9 +61,6 @@
     <ClCompile Include="Engine.cpp">
       <Filter>SDK</Filter>
     </ClCompile>
-    <ClCompile Include="Aimbot.cpp">
-      <Filter>Features</Filter>
-    </ClCompile>
     <ClCompile Include="Visuals.cpp">
       <Filter>Features</Filter>
     </ClCompile>
@@ -96,6 +93,9 @@
     </ClCompile>
     <ClCompile Include="quartic.cpp">
       <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MiscFeatures.cpp">
+      <Filter>Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -135,9 +135,6 @@
     <ClInclude Include="xorstr.hpp">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Aimbot.h">
-      <Filter>Features</Filter>
-    </ClInclude>
     <ClInclude Include="Interface.h">
       <Filter>Menu</Filter>
     </ClInclude>
@@ -173,6 +170,9 @@
     </ClInclude>
     <ClInclude Include="quartic.h">
       <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MiscFeatures.h">
+      <Filter>Features</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

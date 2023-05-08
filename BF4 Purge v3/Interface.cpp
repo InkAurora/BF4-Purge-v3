@@ -58,6 +58,28 @@ LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
   return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
 }
 
+// PERFORMANCE TESTING
+LARGE_INTEGER start, stop, freq;
+int frameCount = 0;
+
+double QPC(bool mode) {
+  if (mode) {
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+  }
+  else if (!mode) {
+	QueryPerformanceCounter(&stop);
+	LONGLONG diff = stop.QuadPart - start.QuadPart;
+	double duration = (double)diff * 1000 / (double)freq.QuadPart;
+
+	return round(duration);
+  }
+
+  return 0;
+}
+
+// PERFORMANCE TESTING
+
 string testText = "";
 
 bool init = false;
@@ -114,6 +136,18 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  return p_present(p_swap_chain, sync_interval, flags);
   }
 
+  // PERFORMANCE TESTING
+  if (Cfg::DBG::performanceTest) {
+	if (frameCount == 75) {
+	  PreUpdate::perf = QPC(false);
+	  frameCount = 0;
+	  QPC(true);
+	} else {
+	  frameCount++;
+	}
+  }
+  // PERFORMANCE TESTING
+
   static auto pSSmoduleClass = (uintptr_t*)OFFSET_SSMODULE;
   if (!IsValidPtr(pSSmoduleClass)) return p_present(p_swap_chain, sync_interval, flags);
 
@@ -133,6 +167,8 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::SetWindowSize(ImVec2(300, 500), ImGuiCond_Always);
 	ImGui::Text("Options:");
 	//ImGui::Text(Cfg::ESP::validPlayers.c_str());
+	ImGui::Checkbox("Performance Testing", &Cfg::DBG::performanceTest);
+	if (Cfg::DBG::performanceTest) ImGui::Text(std::to_string(PreUpdate::perf).c_str());
 	ImGui::Checkbox("Enable ESP", &Cfg::ESP::enable);
 	ImGui::Checkbox("Show Teammates", &Cfg::ESP::team);
 	ImGui::Checkbox("3D Boxes", &Cfg::ESP::use3DplayerBox);
@@ -144,6 +180,8 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::Checkbox("ESP Vehicles Lines", &Cfg::ESP::linesVehicles);
 	ImGui::Checkbox("ESP Spectators", &Cfg::ESP::spectators);
 	ImGui::Checkbox("Aimbot", &Cfg::AimBot::enable);
+	ImGui::Checkbox("No Recoil", &Cfg::DBG::disableRecoil);
+	ImGui::Checkbox("No Spread", &Cfg::DBG::disableSpread);
 	ImGui::Checkbox("Radar", &Cfg::ESP::Radar::enable);
 
 
