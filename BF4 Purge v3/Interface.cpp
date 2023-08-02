@@ -183,6 +183,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::Checkbox("No Recoil", &Cfg::DBG::disableRecoil);
 	ImGui::Checkbox("No Spread", &Cfg::DBG::disableSpread);
 	ImGui::Checkbox("Radar", &Cfg::ESP::Radar::enable);
+	if (Cfg::DBG::testString != "") ImGui::Text(Cfg::DBG::testString.c_str());
 
 
 	ImGui::End();

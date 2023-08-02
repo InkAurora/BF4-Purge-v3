@@ -40,4 +40,5 @@ namespace PreUpdate {
   extern bool isValid;
   extern bool isPredicted;
   extern double perf;
+  extern float angleY;
 }

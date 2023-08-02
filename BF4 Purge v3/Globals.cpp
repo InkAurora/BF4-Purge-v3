@@ -30,4 +30,5 @@ namespace PreUpdate {
   bool isValid;
   bool isPredicted;
   double perf = 0;
+  float angleY;
 }
