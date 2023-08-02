@@ -248,6 +248,7 @@ void InputActions::SoldierWeaponControll(float delta, const Vector targetPos) {
   //Simple aimbot with angle calculations. Awful in every aspect...
 
   auto angles = (Vector2D)Misc::CalcAngles(G::viewPos, targetPos);
+  angles.y = PreUpdate::angleY;
   angles.x -= pAimSim->m_Sway.x;
   angles.y -= pAimSim->m_Sway.y;
 

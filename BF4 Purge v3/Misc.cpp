@@ -107,7 +107,8 @@ D3DXVECTOR3 Misc::CalcAngles(const D3DXVECTOR3& src, const D3DXVECTOR3& dst) {
   D3DXVec3Normalize(&delta, &delta);
   auto hyp = D3DXVec3Length(&delta);
   angles.x = -atan2f(delta.x, delta.z);
-  angles.y = atan2f(delta.y, hyp);
+  //angles.y = atan2f(delta.y, hyp);
+  angles.y = atan2f(delta.y, hyp); // *((delta.y < 0) ? -1.0f : 1.0f);
   angles.z = 0.0f;
   ClampAngles(&angles);
   return angles;
@@ -321,7 +322,7 @@ DWORD64 Misc::GetFunctionCallAddress(DWORD64 baseAddress, DWORD64 functionAddres
 
 DWORD64 Misc::ByteToMem(DWORD64 byte, SIZE_T size) {
   DWORD64 mem = 0x00;
-  for (__int64 i = 0; i < size; i++) {
+  for (int i = 0; i < (int)size; i++) {
 	mem = mem << 8;
 	mem += byte >> (i * 8) & 0xff;
   }
