@@ -1,13 +1,13 @@
 #include "PreFrameUpdate.h"
 
 int Hook::PreFrameUpdate() {
-  if (auto pInput = BorderInputNode::GetInstance(); IsValidPtr(pInput) && IsValidPtr(pInput->m_pMouse)) {
-	if (IsValidPtr(pInput->m_pMouse->m_pDevice) && !pInput->m_pMouse->m_pDevice->m_CursorMode) {
-	  //FIX: Load last saved angles to prevent flip after closing menu
-	  pInput->m_pMouse->m_pDevice->m_UIOwnsInput = G::isMenuVisible;
-	  pInput->m_pMouse->m_pDevice->m_UseRawMouseInput = G::isMenuVisible;
-	}
-  }
+ // if (auto pInput = BorderInputNode::GetInstance(); IsValidPtr(pInput) && IsValidPtr(pInput->m_pMouse)) {
+	//if (IsValidPtr(pInput->m_pMouse->m_pDevice) && !pInput->m_pMouse->m_pDevice->m_CursorMode) {
+	//  //FIX: Load last saved angles to prevent flip after closing menu
+	//  pInput->m_pMouse->m_pDevice->m_UIOwnsInput = G::isMenuVisible;
+	//  pInput->m_pMouse->m_pDevice->m_UseRawMouseInput = G::isMenuVisible;
+	//}
+ // }
 
   auto pDxRenderer = DxRenderer::GetInstance();
   if (!IsValidPtr(pDxRenderer)) return -1;
