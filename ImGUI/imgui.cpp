@@ -3740,8 +3740,8 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         // items if we performed the test in ItemAdd(), but that would incur a small runtime cost.
         if (g.DebugItemPickerActive && g.HoveredIdPreviousFrame == id)
             GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
-        if (g.DebugItemPickerBreakId == id)
-            IM_DEBUG_BREAK();
+        /*if (g.DebugItemPickerBreakId == id)
+            IM_DEBUG_BREAK();*/
     }
 
     if (g.NavDisableMouseHover)
