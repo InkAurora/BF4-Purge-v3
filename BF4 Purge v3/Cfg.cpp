@@ -73,7 +73,7 @@ namespace Cfg {
 	bool teslaAutoPilot = false;
 	float _internalSens = 12.f;
 	float radius = (float)ESP::predictionCrossRadius * 3;
-	float smoothSoldier = 1.f;
+	float smoothSoldier = 4.f;
 	float smoothVehicle = 2.5f;
 
 	float smoothTV = 1.f;
@@ -105,6 +105,7 @@ namespace Cfg {
 	float dbgPos[3] = { 0.0f, 0.0f, 0.0f };
 
 	bool performanceTest = false;
+	std::string testString = "";
 
 	std::array<Vector, 16> _internalPredictionCurve;
 	Quaternion _internalPredictedOrientation;

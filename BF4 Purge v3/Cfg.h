@@ -107,6 +107,7 @@ namespace Cfg {
 	extern float dbgPos[3];
 
 	extern bool performanceTest;
+	extern std::string testString;
 
 	extern bool _internalSpoof;
 	extern bool _internalRestore;
