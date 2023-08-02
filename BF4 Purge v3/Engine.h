@@ -49,10 +49,14 @@ typedef D3DXQUATERNION Quaternion;
 #define _PTR_MAX_VALUE ((PVOID)0xFFF00000)
 #endif
 __forceinline bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < _PTR_MAX_VALUE) && p != nullptr; }
+__forceinline int filterException(int code, PEXCEPTION_POINTERS ex) {
+  return EXCEPTION_EXECUTE_HANDLER;
+}
 __forceinline bool IsBadPtr(intptr_t* p) {
   __try {
+    if (p == nullptr) return true;
     volatile auto result = *p;
-  } __except (EXCEPTION_EXECUTE_HANDLER) {
+  } __except(filterException(GetExceptionCode(), GetExceptionInformation())) {
     return true;
   }
   return false;

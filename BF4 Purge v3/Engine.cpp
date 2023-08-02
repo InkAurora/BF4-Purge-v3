@@ -172,6 +172,7 @@ std::string ClientControllableEntity::GetVehicleName() {
 }
 
 bool ClientControllableEntity::IsAlive() {
+  if (IsBadPtr((intptr_t*)this)) return false;
   if (!IsValidPtr(m_pHealthComp)) return false;
   if (m_pHealthComp->m_Health > 0.0f) return true;
   return false;
@@ -291,7 +292,7 @@ int SoldierWeaponComponent::GetSlot() {
 
 WeaponClass WeaponFiring::GetWeaponClass() {
   auto pData = reinterpret_cast<WeaponEntityData*>(this->m_weaponComponentData);
-  if (IsValidPtr(pData)) return pData->m_WeaponClass;
+  if (!IsBadPtr((intptr_t*)pData)) return pData->m_WeaponClass;
   return WeaponClass::None;
 }
 
