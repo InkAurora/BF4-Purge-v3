@@ -43,6 +43,8 @@ void detach() {
 void WINAPI Main(HMODULE hModule) {
   if (!debugMode) Sleep(30000); // Wait for game initialization before hooking dx11 in release mode
 
+  Sleep(5000);
+
   if (!Interface::InitializeVisuals()) {
     threadRunningOK = false;
   }
@@ -61,6 +63,8 @@ void WINAPI Main(HMODULE hModule) {
   }
 
   detach();
+
+  return;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
