@@ -661,6 +661,10 @@ void Visuals::RenderVisuals() {
 
   float count = 0.0f;
 
+  auto& preUpd = PreUpdate::preUpdatePlayersData;
+  preUpd.pBestTarget = pTargetPlayer;
+  preUpd.pMyMissile = pMyMissile;
+
   //Cfg::ESP::validPlayers = "";
 
   for (int i = 0; i < 70; i++) {
@@ -694,9 +698,10 @@ void Visuals::RenderVisuals() {
 	if (!IsValidPtr(pSoldier) || !pSoldier->IsAlive()) continue;
 
 	//Dont aim at passengers (velocity is always 0 here idk why)
-	//if (pPlayer->m_EntryId == ClientPlayer::EntrySeatType::Passenger) continue;
+	if (pPlayer->m_EntryId == ClientPlayer::EntrySeatType::Passenger) continue;
 
-	ImColor color = isInTeam ? Cfg::ESP::teamColor : Cfg::ESP::enemyColor;
+	ImColor color = isInTeam ? Cfg::ESP::teamColor : PreUpdate::preUpdatePlayersData.visiblePlayers[i] ?
+	  Cfg::ESP::enemyColorVisible : Cfg::ESP::enemyColor;
 	Vector vehicleCenter3D;
 	Vector playerHead3D;
 
@@ -833,12 +838,14 @@ void Visuals::RenderVisuals() {
 
 	//Search for closest player to center of the screen
 	if (!targetLock) {
+	  if (PreUpdate::preUpdatePlayersData.visiblePlayers[i] || pPlayer->InVehicle()) {
 	  if (delta < longestDelta && !isInTeam) {
 		longestDelta = delta;
 		pTargetPlayer = pPlayer;
 		aimPoint3D = tmpAimPoint3D;
 		targetID = i;
 	  }
+	}
 	}
 	else if (IsValidPtr(pPlayer) && (i == targetID))
 	  aimPoint3D = tmpAimPoint3D;

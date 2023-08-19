@@ -271,13 +271,31 @@ bool ClientPlayer::GetBone(int BoneId, D3DXVECTOR3& BoneOut) {
   return false;
 }
 
+bool ClientPlayer::IsVisible(Matrix shootSpace, int boneId) { 
+  auto pRayCaster = Main::GetInstance()->GetRayCaster();
+  if (!IsValidPtr(pRayCaster)) return false;
 
+  Vector target = ZERO_VECTOR; this->GetBone(boneId, target);
 
+  Vector origin = { shootSpace._41, shootSpace._42, shootSpace._43 };
 
+  __declspec(align(16)) Vector	from = origin;
+  __declspec(align(16)) Vector  to = target;
 
+  RayCastHit hit;
 
+  // Credits to dudeinberlin & stevemk14ebr
 
+  if (!pRayCaster->PhysicsRayQuery(xorstr_("ControllableFinder"), &from, &to, &hit, 0x4 | 0x10 | 0x20 | 0x80, NULL))
+    return true;
+  else {
+    if (!IsValidPtr(hit.m_rigidBody))
+      return false;
+    if (hit.m_material.isSeeThrough() || hit.m_material.isPenetrable())
+      return true;
+  }
 
+  return false;
 }
 
 //bool ClientPlayer::IsAimingAtYou(ClientPlayer* pLocal) {

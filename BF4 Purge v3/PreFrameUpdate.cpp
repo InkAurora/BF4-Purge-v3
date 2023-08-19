@@ -47,6 +47,18 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
 
   pLocal->GetCurrentWeaponData(&PreUpdate::weaponData);
 
+  Matrix shootSpace; pLocal->GetWeaponShootSpace(shootSpace);
+
+  for (int i = 0; i < 70; i++) {
+	auto pPlayer = pManager->GetPlayerById(i);
+	if (pPlayer == pLocal) continue;
+	if (!IsValidPtr(pPlayer->GetSoldierEntity())) continue;
+	if (!pPlayer->GetSoldierEntity()->IsAlive()) continue;
+	if (pPlayer->m_TeamId == pLocal->m_TeamId) continue;
+
+	PreUpdate::preUpdatePlayersData.visiblePlayers[i] = pPlayer->IsVisible(shootSpace, Cfg::AimBot::bone);
+  }
+
   Vector aimPoint = ZERO_VECTOR;
   auto& d = PreUpdate::preUpdatePlayersData;
   if (IsBadPtr((intptr_t*)d.pBestTarget)) return result;

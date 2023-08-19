@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "imgui.h"
 #include "Visuals.h"
+#include <vector>
 #include <memory>
 
 namespace DX {
@@ -38,6 +39,7 @@ struct UpdateData_s {
   ClientPlayer* pBestTarget = nullptr;
   VeniceClientMissileEntity* pMyMissile = nullptr;
   Vector origin = {};
+  std::vector<bool> visiblePlayers = std::vector<bool>(70, false);
 };
 
 namespace PreUpdate {
