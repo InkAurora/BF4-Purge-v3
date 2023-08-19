@@ -5,6 +5,7 @@
 #include "Visuals.h"
 #include <vector>
 #include <memory>
+#include "MiscFeatures.h"
 
 namespace DX {
   extern ImFont* Verdana8;

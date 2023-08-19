@@ -82,8 +82,9 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   InputActions::Get()->HandleInput(
 	PreUpdate::predictionData.hitPos, pLocal, PreUpdate::weaponData, aimPoint, d.pMyMissile);
 
-  Features::Recoil(Cfg::DBG::disableRecoil);
-  Features::Spread(Cfg::DBG::disableSpread);
+  F::pFeatures->MinimapSpot(Cfg::Misc::minimapSpot);
+  F::pFeatures->Recoil(Cfg::Misc::disableRecoil);
+  F::pFeatures->Spread(Cfg::Misc::disableSpread);
 
   return result;
 }

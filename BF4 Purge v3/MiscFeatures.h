@@ -5,6 +5,11 @@
 
 class Features {
 public:
-  static void Recoil(bool state);
-  static void Spread(bool state);
+  Features();
+
+  DWORD64 moduleBase;
+
+  void MinimapSpot(bool state);
+  void Recoil(bool state);
+  void Spread(bool state);
 };

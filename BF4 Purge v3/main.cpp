@@ -29,10 +29,13 @@ DWORD WINAPI Main(HMODULE hModule) {
   HooksManager::Get()->Install();
 
   F::pVisuals = std::make_unique<Visuals>();
+  F::pFeatures = std::make_unique<Features>();
 
   while (!G::shouldExit) Sleep(300);
 
-  //CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)EnableAimbot, NULL, NULL, NULL);
+  F::pFeatures->MinimapSpot(false);
+  F::pFeatures->Recoil(false);
+  F::pFeatures->Spread(false);
 
   HooksManager::Get()->Uninstall();
 
