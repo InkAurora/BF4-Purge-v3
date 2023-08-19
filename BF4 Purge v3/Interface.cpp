@@ -174,18 +174,24 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::SetWindowSize(ImVec2(480, 500), ImGuiCond_Always);
 	ImGui::Text("Options:");
 	//ImGui::Text(Cfg::ESP::validPlayers.c_str());
-	ImGui::Checkbox("Performance Testing", &Cfg::DBG::performanceTest);
-	if (Cfg::DBG::performanceTest) ImGui::Text(std::to_string(PreUpdate::perf).c_str());
-	ImGui::Checkbox("Enable ESP", &Cfg::ESP::enable);
-	ImGui::Checkbox("Show Teammates", &Cfg::ESP::team);
-	ImGui::Checkbox("3D Boxes", &Cfg::ESP::use3DplayerBox);
-	ImGui::Checkbox("ESP Vehicles", &Cfg::ESP::vehicles);
-	ImGui::Checkbox("3D Vehicle Boxes", &Cfg::ESP::use3DvehicleBox);
-	ImGui::Checkbox("ESP Explosives", &Cfg::ESP::explosives);
-	ImGui::Checkbox("ESP Lines", &Cfg::ESP::lines);
-	ImGui::Checkbox("ESP Lines Allies", &Cfg::ESP::alliesLines);
-	ImGui::Checkbox("ESP Vehicles Lines", &Cfg::ESP::linesVehicles);
-	ImGui::Checkbox("ESP Spectators", &Cfg::ESP::spectators);
+	if (ImGui::BeginTable("split2", 2)) {
+	  ImGui::TableNextColumn(); ImGui::Checkbox("Enable ESP", &Cfg::ESP::enable);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("Show Teammates", &Cfg::ESP::team);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("Lines", &Cfg::ESP::lines);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("Lines to Allies", &Cfg::ESP::alliesLines);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("ESP Vehicles", &Cfg::ESP::vehicles);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("Lines to Vehicles", &Cfg::ESP::linesVehicles);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("3D Boxes", &Cfg::ESP::use3DplayerBox);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("3D Vehicles", &Cfg::ESP::use3DvehicleBox);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("ESP Explosives", &Cfg::ESP::explosives);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("JDAM Prediction", &Cfg::ESP::predictionBombImpact);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("No Recoil", &Cfg::Misc::disableRecoil);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("No Spread", &Cfg::Misc::disableSpread);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("Spectator Warning", &Cfg::ESP::spectators);
+	  ImGui::TableNextColumn(); ImGui::Checkbox("Minimap Spot", &Cfg::Misc::minimapSpot);
+	  ImGui::EndTable();
+	}
+	ImGui::Checkbox("Radar", &Cfg::ESP::Radar::enable);
 	ImGui::Checkbox("Stats", &Cfg::Misc::showStats);
 	ImGui::Checkbox("Aimbot", &Cfg::AimBot::enable);
 	ImGui::SliderFloat("##s", &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, "Smoothing: %.1f");
@@ -203,8 +209,12 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   Renderer::DrawString({ 50 - 32, 9 - 2 }, StringFlag::CENTER_Y, ImColor::Black(), fps.c_str());
   Renderer::DrawString({ 50 - 30, 9 }, StringFlag::CENTER_Y, ImColor(223, 32, 32), fps.c_str());
 
+  if (Cfg::DBG::testString != "") Renderer::DrawString({ 100, 100 },
+	StringFlag::CENTER_Y, ImColor::Purple(), Cfg::DBG::testString.c_str());
 
   ImGuiIO& io = ImGui::GetIO();
+
+  io.MouseDrawCursor = G::isMenuVisible;
 
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
