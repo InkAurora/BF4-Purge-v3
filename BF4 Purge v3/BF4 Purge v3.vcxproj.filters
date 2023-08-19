@@ -29,6 +29,9 @@
     <Filter Include="Renderer">
       <UniqueIdentifier>{a4d63faf-b70d-48ec-9cbd-617a01943686}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Hook">
+      <UniqueIdentifier>{6197fcdf-2940-4573-8b5a-e9a68b90c6b5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -97,6 +100,12 @@
     <ClCompile Include="MiscFeatures.cpp">
       <Filter>Features</Filter>
     </ClCompile>
+    <ClCompile Include="VMTHooking.cpp">
+      <Filter>Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicsRayQuery.cpp">
+      <Filter>Internal</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MinHook\MinHook.h">
@@ -159,9 +168,6 @@
     <ClInclude Include="Misc.h">
       <Filter>Internal</Filter>
     </ClInclude>
-    <ClInclude Include="PreFrameUpdate.h">
-      <Filter>Internal</Filter>
-    </ClInclude>
     <ClInclude Include="EntityPrediction.h">
       <Filter>Math</Filter>
     </ClInclude>
@@ -173,6 +179,9 @@
     </ClInclude>
     <ClInclude Include="MiscFeatures.h">
       <Filter>Features</Filter>
+    </ClInclude>
+    <ClInclude Include="VMTHooking.h">
+      <Filter>Hook</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

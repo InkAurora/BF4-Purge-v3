@@ -113,7 +113,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <DisableSpecificWarnings>4005; 4099; 4244; 4267; 4305</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4005; 4099; 4244; 4267; 4302; 4305; 4311;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,7 +132,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <DisableSpecificWarnings>4005; 4099; 4244; 4267; 4305</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4005; 4099; 4244; 4267; 4302; 4305; 4311;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -162,11 +162,13 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Misc.cpp" />
     <ClCompile Include="MiscFeatures.cpp" />
+    <ClCompile Include="PhysicsRayQuery.cpp" />
     <ClCompile Include="PreFrameUpdate.cpp" />
     <ClCompile Include="quartic.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="TypeInfo.cpp" />
     <ClCompile Include="Visuals.cpp" />
+    <ClCompile Include="VMTHooking.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\ImGUI\imconfig.h" />
@@ -188,11 +190,11 @@
     <ClInclude Include="Interface.h" />
     <ClInclude Include="Misc.h" />
     <ClInclude Include="MiscFeatures.h" />
-    <ClInclude Include="PreFrameUpdate.h" />
     <ClInclude Include="quartic.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="TypeInfo.h" />
     <ClInclude Include="Visuals.h" />
+    <ClInclude Include="VMTHooking.h" />
     <ClInclude Include="xorstr.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

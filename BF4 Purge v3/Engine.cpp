@@ -23,9 +23,8 @@ PlayerManager* PlayerManager::GetInstance() {
 }
 
 bool ClientPlayer::InVehicle() {
-  //Weird fix but at least its not crashing here anymore..
-  if (IsBadPtr((intptr_t*)this)) return false;
-  return InVehicleFn();
+  if (IsBadPtr((intptr_t*)this->m_pControlledControllable)) return false;
+  return this->InVehicleFn();
 }
 
 bool ClientPlayer::GetCurrentWeaponData(WeaponData_s* pDataOut) {
@@ -49,7 +48,7 @@ bool ClientPlayer::GetCurrentWeaponData(WeaponData_s* pDataOut) {
 
   auto pFiringData = pWeaponFiring->m_pPrimaryFire->m_FiringData;	// <--- Sometimes crash occurs here as well without any information from debugger.
 
-  if (!IsValidPtr(pFiringData) || (uintptr_t)(pFiringData) == 0x3893E06) return false;
+  if (IsBadPtr((intptr_t*)pFiringData)) return false;
 
   auto pProjData = pFiringData->m_ShotConfigData.m_ProjectileData;
   if (!IsValidPtr(pProjData)) return false;
@@ -173,7 +172,7 @@ std::string ClientControllableEntity::GetVehicleName() {
 
 bool ClientControllableEntity::IsAlive() {
   if (IsBadPtr((intptr_t*)this)) return false;
-  if (!IsValidPtr(m_pHealthComp)) return false;
+  if (IsBadPtr((intptr_t*)m_pHealthComp)) return false;
   if (m_pHealthComp->m_Health > 0.0f) return true;
   return false;
 }
@@ -203,7 +202,7 @@ FiringFunctionData* ClientSoldierEntity::GetFiringData() {
   auto p = WeaponFiring::GetInstance();
 
   if (!IsValidPtr(p)) return nullptr;
-  if (!IsValidPtr(p->m_pPrimaryFire)) return nullptr;
+  if (IsBadPtr((intptr_t*)p->m_pPrimaryFire)) return nullptr;
   if (!IsValidPtr(p->m_pPrimaryFire->m_FiringData)) return nullptr;
 
   return p->m_pPrimaryFire->m_FiringData;
@@ -337,6 +336,7 @@ WeaponZeroingEntry ZeroingModifier::GetZeroLevelAt(int index) {
   if (index > -1)
     return m_ppZeroLevels[index];
   else
+    if (IsBadPtr((intptr_t*)this)) return WeaponZeroingEntry(0.0f, 0.0f);
     return WeaponZeroingEntry(m_DefaultZeroingDistance, 0.0f);
 }
 
