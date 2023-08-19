@@ -5,13 +5,13 @@ namespace Cfg {
 	bool aimbotFov = false;
 	bool watermark = false;
 
-	bool enable = false;
+	bool enable = true;
 	bool use3DplayerBox = false;
 	bool team = false;
 	bool name = false;
-	bool spectators = false;
+	bool spectators = true;
 
-	bool vehicles = false;
+	bool vehicles = true;
 	bool use3DvehicleBox = true;
 	bool vehicleCenter = true;
 
@@ -26,7 +26,7 @@ namespace Cfg {
 
 	bool lines = false;
 	bool alliesLines = false;
-	bool linesVehicles = false;
+	bool linesVehicles = true;
 	bool vehicleIndicator = true;
 
 	namespace Radar {
@@ -42,7 +42,7 @@ namespace Cfg {
 	  ImColor soldierColor = ImColor::Red();
 	}
 
-	bool explosives = false;
+	bool explosives = true;
 	bool ownMissile = true;
 
 	std::vector<unsigned int> _internalPlayerIDs;
@@ -68,7 +68,7 @@ namespace Cfg {
   }
 
   namespace AimBot {
-	bool enable = false;
+	bool enable = true;
 	UpdatePoseResultData::BONES bone = UpdatePoseResultData::BONES::Head;
 	bool autoTrigger = false;
 	bool teslaAutoPilot = false;
