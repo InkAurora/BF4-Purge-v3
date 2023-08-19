@@ -49,11 +49,12 @@ namespace Cfg {
 	std::vector<unsigned int> _internalSelectedPlayerIDs;
 
 	ImColor fovColor = ImColor::White(130);
-	ImColor teamColor = ImColor(120, 255, 76);
+	ImColor teamColor = ImColor(52, 192, 235);
 	ImColor linesColor = ImColor(252, 119, 3);
 	ImColor linesVehicleAirColor = ImColor(0, 142, 255, 90);
 	ImColor linesVehicleGroundColor = ImColor::Orange(90);
-	ImColor enemyColor = ImColor(255, 71, 102);
+	ImColor enemyColor = ImColor(235, 146, 52);
+	ImColor enemyColorVisible = ImColor(255, 10, 25);
 	ImColor vehicleAirColor = ImColor(0, 142, 255, 90);
 	ImColor vehicleGroundColor = ImColor(255, 156, 56, 90);
 	ImColor missileColor = ImColor::Red();

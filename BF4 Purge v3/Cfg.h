@@ -57,6 +57,7 @@ namespace Cfg {
 	extern ImColor linesVehicleAirColor;
 	extern ImColor linesVehicleGroundColor;
 	extern ImColor enemyColor;
+	extern ImColor enemyColorVisible;
 	extern ImColor vehicleAirColor;
 	extern ImColor vehicleGroundColor;
 	extern ImColor missileColor;
