@@ -1,6 +1,7 @@
 #include "Interface.h"
 #include "Cfg.h"
 #include "xorstr.hpp"
+#include "VMTHooking.h"
 
 typedef long(__stdcall* present)(IDXGISwapChain*, UINT, UINT);
 present p_present;
@@ -49,36 +50,29 @@ WNDPROC oWndProc;
 // - You should COPY the line below into your .cpp code to forward declare the function and then you can call it.
 // - Call from your application's message handler. Keep calling your message handler unless this function returns TRUE.
 // Forward declare message handler from imgui_impl_win32.cpp
-extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-  // handle input issues here.
+//extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+//LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+//  // handle input issues here.
+//
+//  if (true && ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) return true;
+//
+//  return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
+//}
 
-  if (true && ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) return true;
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT __stdcall HooksManager::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  if (G::isMenuVisible) {
+	ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
-  return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
+	switch (uMsg) {
+	case WM_MOUSEMOVE: return false;
+	default:
+	  break;
 }
-
-// PERFORMANCE TESTING
-LARGE_INTEGER start, stop, freq;
-int frameCount = 0;
-
-double QPC(bool mode) {
-  if (mode) {
-	QueryPerformanceFrequency(&freq);
-	QueryPerformanceCounter(&start);
+	return true;
   }
-  else if (!mode) {
-	QueryPerformanceCounter(&stop);
-	LONGLONG diff = stop.QuadPart - start.QuadPart;
-	double duration = (double)diff * 1000 / (double)freq.QuadPart;
-
-	return round(duration);
+  return CallWindowProc(HooksManager::Get()->oWndproc, hWnd, uMsg, wParam, lParam);
   }
-
-  return 0;
-}
-
-// PERFORMANCE TESTING
 
 string testText = "";
 
@@ -101,7 +95,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  p_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
 	  p_device->CreateRenderTargetView(pBackBuffer, NULL, &mainRenderTargetView);
 	  pBackBuffer->Release();
-	  oWndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProc);
+	  /*oWndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProc);*/
 
 	  ImGui::CreateContext();
 	  ImGuiIO& io = ImGui::GetIO();
@@ -144,7 +138,21 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  QPC(true);
 	} else {
 	  frameCount++;
+  if (GetAsyncKeyState(VK_INSERT) & 0x1) G::isMenuVisible = !G::isMenuVisible;
+  if (GetAsyncKeyState(VK_END) & 0x8000) G::shouldExit = true;
+
+  static bool reHook = false;
+  auto pLocal = PlayerManager::GetInstance()->GetLocalPlayer();
+
+  if (!IsValidPtr(pLocal)) { //nullptr when loading to the server
+	if (!reHook) {
+	  reHook = true;
+	  HooksManager::Get()->pPreFrameHook->Release();
 	}
+  } else if (reHook) { //fully loaded
+	reHook = false;
+	HooksManager::Get()->pPreFrameHook->Setup(BorderInputNode::GetInstance()->m_pInputNode);
+	HooksManager::Get()->pPreFrameHook->Hook(Index::PRE_FRAME_UPDATE, HooksManager::PreFrameUpdate);
   }
   // PERFORMANCE TESTING
 
@@ -154,8 +162,6 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   //Simple PBSS bypass
   auto ssRequest = (*(int*)(*pSSmoduleClass + 0x14) != -1);
   if (ssRequest) return p_present(p_swap_chain, sync_interval, flags);
-
-  if (Hook::PreFrameUpdate() == -1) return p_present(p_swap_chain, sync_interval, flags);
 
   ImGui_ImplDX11_NewFrame();
   ImGui_ImplWin32_NewFrame();
@@ -256,7 +262,7 @@ bool Interface::ShutdownVisuals() {
   if (mainRenderTargetView) { mainRenderTargetView->Release(); mainRenderTargetView = NULL; }
   if (p_context) { p_context->Release(); p_context = NULL; }
   if (p_device) { p_device->Release(); p_device = NULL; }
-  SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)(oWndProc)); // "unhook"
+  //SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)(oWndProc)); // unhook
 
   return true;
 }

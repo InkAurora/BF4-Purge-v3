@@ -1,6 +1,13 @@
-#include "PreFrameUpdate.h"
+#include "VMTHooking.h"
+#include "Globals.h"
+#include "EntityPrediction.h"
+#include "InputActions.h"
+#include "MiscFeatures.h"
 
-int Hook::PreFrameUpdate() {
+int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaTime) {
+  static auto oPreFrameUpdate = HooksManager::Get()->pPreFrameHook->GetOriginal<PreFrameUpdate_t>(Index::PRE_FRAME_UPDATE);
+  auto result = oPreFrameUpdate(pThis, EDX, deltaTime);
+
  // if (auto pInput = BorderInputNode::GetInstance(); IsValidPtr(pInput) && IsValidPtr(pInput->m_pMouse)) {
 	//if (IsValidPtr(pInput->m_pMouse->m_pDevice) && !pInput->m_pMouse->m_pDevice->m_CursorMode) {
 	//  //FIX: Load last saved angles to prevent flip after closing menu
@@ -10,29 +17,29 @@ int Hook::PreFrameUpdate() {
  // }
 
   auto pDxRenderer = DxRenderer::GetInstance();
-  if (!IsValidPtr(pDxRenderer)) return -1;
+  if (!IsValidPtr(pDxRenderer)) return result;
   auto pScreen = pDxRenderer->m_pScreen;
-  if (!IsValidPtr(pScreen)) return -1;
+  if (!IsValidPtr(pScreen)) return result;
 
   G::screenSize = { float(pScreen->m_Width), float(pScreen->m_Height) };
   G::screenCenter = { G::screenSize.x * .5f, G::screenSize.y * .5f };
   G::viewPos2D = G::screenCenter;
 
   auto pGameRenderer = GameRenderer::GetInstance();
-  if (!IsValidPtr(pGameRenderer) || !IsValidPtr(pGameRenderer->m_pRenderView)) return -1;
+  if (!IsValidPtr(pGameRenderer) || !IsValidPtr(pGameRenderer->m_pRenderView)) return result;
   G::viewPos = (Vector)&pGameRenderer->m_pRenderView->m_ViewInverse._41;
 
   auto pManager = PlayerManager::GetInstance();
-  if (!IsValidPtr(pManager)) return -1;
+  if (!IsValidPtr(pManager)) return result;
   auto pLocal = pManager->GetLocalPlayer();
   if (!IsValidPtr(pLocal) || !IsValidPtr(pLocal->GetSoldierEntity()) || !pLocal->GetSoldierEntity()->IsAlive())
-	return 1;
+	return result;
 
   pLocal->GetCurrentWeaponData(&PreUpdate::weaponData);
 
   Vector aimPoint = ZERO_VECTOR;
   auto& d = PreUpdate::preUpdatePlayersData;
-  if (!IsValidPtr(d.pBestTarget)) return 1;
+  if (IsBadPtr((intptr_t*)d.pBestTarget)) return result;
 
   if (auto pTargetSoldier = d.pBestTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
 	if (!pTargetSoldier->IsAlive()) return 1;
@@ -45,7 +52,7 @@ int Hook::PreFrameUpdate() {
 	}
   }
 
-  if (aimPoint == ZERO_VECTOR) return 1;
+  if (aimPoint == ZERO_VECTOR) return result;
 
   PreUpdate::isPredicted = Prediction::GetPredictedAimPoint(
 	pLocal, d.pBestTarget, aimPoint, &PreUpdate::predictionData, d.pMyMissile, &PreUpdate::weaponData);
@@ -56,5 +63,5 @@ int Hook::PreFrameUpdate() {
   Features::Recoil(Cfg::DBG::disableRecoil);
   Features::Spread(Cfg::DBG::disableSpread);
 
-  return 0;
+  return result;
 }

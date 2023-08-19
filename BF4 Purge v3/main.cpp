@@ -1,5 +1,6 @@
 #include "includes.h"
 #include "Interface.h"
+#include "VMTHooking.h"
 
 // --------------------------------------------------------------------------------
 // This project uses many things from Menool's HyperHook internal
@@ -10,71 +11,44 @@
 
 // ClientGameContext* GameContext = (ClientGameContext*)*(DWORD*)(OFFSET_CLIENTGAMECONTEXT);
 
-HINSTANCE DLLHandle;
-
-bool threadRunningOK = true;
-
-#ifdef DEBUG
-bool debugMode = true;
-#else
-bool debugMode = false;
-#endif
-
 // -----------------------------------------------------------------
 // -----------------------------------------------------------------
 
-DWORD __stdcall EjectThread(LPVOID lpParameter) {
-  Sleep(100);
-  FreeLibraryAndExitThread(DLLHandle, 0);
-  Sleep(100);
-  return 0;
+DWORD WINAPI EjectThread() {
+  FreeLibraryAndExitThread(G::hInst, 0);
+  return 1;
 }
 
-void detach() {
-  Sleep(100);
+DWORD WINAPI Main(HMODULE hModule) {
+  //Sleep(5000);
 
-  if (!Interface::ShutdownVisuals()) {
-    Sleep(100);
+  if (!Interface::InitializeVisuals()) {
+    G::shouldExit = true;
   }
-  CreateThread(0, 0, EjectThread, 0, 0, 0);
-  return;
-}
 
-void WINAPI Main(HMODULE hModule) {
-  if (!debugMode) Sleep(30000); // Wait for game initialization before hooking dx11 in release mode
+  HooksManager::Get()->Install();
 
   Sleep(5000);
 
-  if (!Interface::InitializeVisuals()) {
-    threadRunningOK = false;
-  }
+  while (!G::shouldExit) Sleep(300);
 
   //CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)EnableAimbot, NULL, NULL, NULL);
 
-  while (threadRunningOK) {
-    Sleep(50);
-    if (GetAsyncKeyState(VK_INSERT) & 1) {
-      G::isMenuVisible = !G::isMenuVisible;
-      while (GetAsyncKeyState(VK_INSERT) & 1) {}
-    }
-    if (GetAsyncKeyState(VK_END) & 1) {
-      break;
-    }
-  }
+  HooksManager::Get()->Uninstall();
 
-  detach();
+  Interface::ShutdownVisuals();
 
-  return;
+  Sleep(100);
+
+  return EjectThread();
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-  switch (ul_reason_for_call) {
-  case DLL_PROCESS_ATTACH:
-    DLLHandle = hModule;
+  
+  if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+    G::hInst = hModule;
     CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Main, hModule, NULL, NULL);
-    break;
-  case DLL_PROCESS_DETACH:
-    break;
   }
+
   return TRUE;
 }
