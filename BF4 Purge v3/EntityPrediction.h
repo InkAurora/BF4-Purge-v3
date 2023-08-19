@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "Misc.h"
 #include "quartic.h"
+#include "Cfg.h"
 
 class Prediction {
 public:

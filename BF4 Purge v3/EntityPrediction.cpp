@@ -391,7 +391,7 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 		auto ZeroEntry = WeaponZeroingEntry(-1.0f, -1.0f);
 
 		auto* pZeroing = pClientWeapon->m_pWeaponModifier->m_ZeroingModifier;
-		if (IsValidPtr(pZeroing)) {
+		if (!IsBadPtr((intptr_t*)pZeroing)) {
 		  int m_ZeroLevelIndex = pWeaponComp->m_ZeroingDistanceLevel;
 		  ZeroEntry = pZeroing->GetZeroLevelAt(m_ZeroLevelIndex);
 		}
@@ -402,6 +402,34 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 		  float ZeroDrop = 0.5f * bulletGravity * ZeroAirTime * ZeroAirTime;
 		  zeroEntry = atan2(ZeroDrop, ZeroEntry.m_ZeroDistance);
 		}
+
+		int zeroAdjust = -1;
+		float d = dataOut->distance;
+
+		if (d > 150) zeroAdjust = 0;
+		if (d > 250) zeroAdjust = 1;
+		if (d > 350) zeroAdjust = 2;
+		if (d > 450) zeroAdjust = 3;
+		if (d > 750) zeroAdjust = 4;
+
+		if (pWeaponComp->m_ZeroingDistanceLevel != zeroAdjust && (GetAsyncKeyState(VK_MENU) & 0x8000)) {
+		  if (IsValidPtr(pFiring) && IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData)) {
+			if (pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
+			  == ProjectileEntityData::AntHitReactionWeaponType_SniperRifle) {
+			  CHAR* lparam = new char('V');
+			  static int z0 = -1;
+			  if (z0 == pWeaponComp->m_ZeroingDistanceLevel || framecount > (G::inputFPS / 2)) {
+				framecount = 0;
+				CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Misc::Send, lparam, 0, 0);
+				z0 = pWeaponComp->m_ZeroingDistanceLevel;
+				if (z0 == 4) z0 = -1;
+				else z0++;
+			  }
+			}
+		  }
+		}
+
+		//Cfg::DBG::testString = to_string(pWeaponComp->m_ZeroingDistanceLevel) + " " + to_string(lround(ZeroEntry.m_ZeroDistance));
 	  }
 	}
   }

@@ -247,8 +247,8 @@ void InputActions::SoldierWeaponControll(float delta, const Vector targetPos) {
 
   //Simple aimbot with angle calculations. Awful in every aspect...
 
-  auto angles = (Vector2D)Misc::CalcAngles(G::viewPos, targetPos);
-  angles.y = PreUpdate::angleY;
+  auto angles = (Vector2D)Misc::CalcAngles2D(G::viewPos, targetPos);
+  //angles.y = PreUpdate::angleY;
   angles.x -= pAimSim->m_Sway.x;
   angles.y -= pAimSim->m_Sway.y;
 
@@ -318,8 +318,7 @@ void InputActions::TriggerControll(const Vector& targetPos, float delta, float* 
 
   if (isAboutToOverheat) return;
 
-  if (this->isAutoPiloting) //Only when autopiloting jet
-  {
+  if (this->isAutoPiloting) { //Only when autopiloting jet
 	auto pRayCaster = Main::GetInstance()->GetRayCaster();
 	if (!IsValidPtr(pRayCaster)) return;
 
@@ -328,9 +327,6 @@ void InputActions::TriggerControll(const Vector& targetPos, float delta, float* 
 	if (!IsValidPtr(pTarget)) return;
 
 	if (pTarget->InVehicle() && IsValidPtr(pTarget->GetClientVehicleEntity())) {
-	  auto pRayCaster = Main::GetInstance()->GetRayCaster();
-	  if (!IsValidPtr(pRayCaster)) return;
-
 	  D3DXMATRIX matrix;
 	  TransformAABBStruct transAABB;
 	  D3DXMatrixRotationQuaternion(&matrix, &Cfg::DBG::_internalPredictedOrientation);

@@ -298,6 +298,40 @@ float Misc::Distance2D(const D3DXVECTOR2& src, const D3DXVECTOR2& dst) {
   return D3DXVec2Length(&ret);
 }
 
+void Misc::Send(LPVOID lparam) {
+  int mode = 0;
+  CHAR* keyParam = static_cast<CHAR*>(lparam);
+  SHORT key;
+  UINT mappedKey;
+  key = VkKeyScan(*keyParam);
+  mappedKey = MapVirtualKey(LOBYTE(key), 0);
+
+  INPUT input = { 0 };
+  input.type = INPUT_KEYBOARD;
+  input.ki.wScan = mappedKey;
+  input.ki.dwFlags = KEYEVENTF_SCANCODE;
+
+  switch (mode) {
+  case 0:
+	SendInput(1, &input, sizeof(input));
+	Sleep(20);
+	input.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+	SendInput(1, &input, sizeof(input));
+	break;
+  case 1:
+	SendInput(1, &input, sizeof(input));
+	break;
+  case 2:
+	input.ki.dwFlags = KEYEVENTF_KEYUP;
+	SendInput(1, &input, sizeof(input));
+	break;
+  default:
+	break;
+  }
+
+  return;
+}
+
 void Misc::ReadBytes(DWORD64 address, void* destination, SIZE_T size) {
   memcpy(destination, (void*)address, size);
 }
