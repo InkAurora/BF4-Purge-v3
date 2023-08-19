@@ -156,7 +156,6 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	HooksManager::Get()->pPreFrameHook->Setup(BorderInputNode::GetInstance()->m_pInputNode);
 	HooksManager::Get()->pPreFrameHook->Hook(Index::PRE_FRAME_UPDATE, HooksManager::PreFrameUpdate);
   }
-  // PERFORMANCE TESTING
 
   static auto pSSmoduleClass = (uintptr_t*)OFFSET_SSMODULE;
   if (!IsValidPtr(pSSmoduleClass)) return p_present(p_swap_chain, sync_interval, flags);
@@ -218,7 +217,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   ImGuiWindow* window = ImGui::GetCurrentWindow();
   ImDrawList* draw_list = window->DrawList;
 
-  Visuals::RenderVisuals();
+  F::pVisuals->RenderVisuals();
 
   window->DrawList->PushClipRectFullScreen();
   ImGui::End();

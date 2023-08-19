@@ -21,6 +21,11 @@ namespace G {
   HINSTANCE		hInst = NULL;
 }
 
+namespace F {
+  std::unique_ptr<Visuals>    pVisuals;
+  std::unique_ptr<Features>   pFeatures;
+}
+
 namespace PreUpdate {
   UpdateData_s preUpdatePlayersData;
   PredictionData_s predictionData;

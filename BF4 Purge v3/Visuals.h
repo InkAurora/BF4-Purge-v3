@@ -16,14 +16,16 @@ public:
   static bool WorldToScreen(const Vector& origin, ImVec2& screen);
   static bool WorldToScreen(Vector& origin);
   static BoundingBox GetEntityAABB(ClientControllableEntity* pEntity, BoundingBox3D* pTransformed3D = nullptr);
-  static VeniceClientMissileEntity* GetMissileEntity(ClientGameContext* pCtx, ClientPlayer* pLocal);
-  static void RenderPlayerCorneredRect(const BoundingBox& bbEntity, const ImColor& color);
-  static void RenderAimPoint(const PredictionData_s& data, ClientPlayer* pTargetData = nullptr);
-  static void RenderBombImpact(const Vector& targetPos, WeaponData_s* pDataIn = nullptr);
-  static void RenderExplosives(ClientGameContext* pCtx);
-  static void RenderPlayerHealth(const BoundingBox& bbEntity);
+
+private:
+  VeniceClientMissileEntity* GetMissileEntity(ClientGameContext* pCtx, ClientPlayer* pLocal);
+  void RenderPlayerCorneredRect(const BoundingBox& bbEntity, const ImColor& color);
+  void RenderAimPoint(const PredictionData_s& data, ClientPlayer* pTargetData = nullptr);
+  void RenderBombImpact(const Vector& targetPos, WeaponData_s* pDataIn = nullptr);
+  void RenderExplosives(ClientGameContext* pCtx);
+  void RenderPlayerHealth(const BoundingBox& bbEntity);
   void RenderStats();
 
 public:
-  static void RenderVisuals();
+  void RenderVisuals();
 };

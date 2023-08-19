@@ -28,7 +28,7 @@ DWORD WINAPI Main(HMODULE hModule) {
 
   HooksManager::Get()->Install();
 
-  Sleep(5000);
+  F::pVisuals = std::make_unique<Visuals>();
 
   while (!G::shouldExit) Sleep(300);
 

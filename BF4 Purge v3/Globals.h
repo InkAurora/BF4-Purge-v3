@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "imgui.h"
 #include "Visuals.h"
+#include <memory>
 
 namespace DX {
   extern ImFont* Verdana8;
@@ -23,6 +24,14 @@ namespace G {
   extern D3DXVECTOR3 viewPos;
   extern bool targetLock;
   extern HINSTANCE hInst;
+}
+
+class Visuals;
+class Features;
+
+namespace F {
+  extern std::unique_ptr<Visuals>     pVisuals;
+  extern std::unique_ptr<Features>    pFeatures;
 }
 
 struct UpdateData_s {

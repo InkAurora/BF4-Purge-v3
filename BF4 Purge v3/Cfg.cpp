@@ -3,7 +3,7 @@
 namespace Cfg {
   namespace ESP {
 	bool aimbotFov = false;
-	bool watermark = true;
+	bool watermark = false;
 
 	bool enable = false;
 	bool use3DplayerBox = false;
@@ -30,7 +30,7 @@ namespace Cfg {
 	bool vehicleIndicator = true;
 
 	namespace Radar {
-	  bool enable = true;
+	  bool enable = false;
 	  bool onlyInVehicle = false;
 	  int radius = 100;
 	  bool showVehicles = true;
