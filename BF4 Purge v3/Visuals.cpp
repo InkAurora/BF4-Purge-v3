@@ -600,7 +600,17 @@ void Visuals::RenderPlayerHealth(const BoundingBox& bbEntity) {
   //TODO:
 }
 
+void Visuals::RenderStats() {
+  uintptr_t p_Stats = *(uintptr_t*)(0x142737A40);
+  int Shots = *(uintptr_t*)(p_Stats + 0x4C);
+  int Hit = *(uintptr_t*)(p_Stats + 0x54);
+  float accuracy = Shots > 0 ? (float)Hit / Shots * 100.0f : 0.0f;
+  Renderer::DrawString({ G::screenSize.x / 2, 10 }, StringFlag::CENTER_X,ImColor(245, 150, 10), xorstr_("Accuracy: %.1f%%"), accuracy);
+}
+
 void Visuals::RenderVisuals() {
+  if (Cfg::Misc::showStats) RenderStats();
+
   if (!Cfg::ESP::enable) return;
 
   ClientGameContext* pGameCtx = ClientGameContext::GetInstance();

@@ -163,8 +163,8 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   ImGui::NewFrame();
 
   if (G::isMenuVisible) {
-	ImGui::Begin("BF4 Purge v3", &G::isMenuVisible);
-	ImGui::SetWindowSize(ImVec2(300, 500), ImGuiCond_Always);
+	ImGui::Begin(xorstr_("BF4 Purge v3   [unknowncheats.me]"), &G::isMenuVisible);
+	ImGui::SetWindowSize(ImVec2(480, 500), ImGuiCond_Always);
 	ImGui::Text("Options:");
 	//ImGui::Text(Cfg::ESP::validPlayers.c_str());
 	ImGui::Checkbox("Performance Testing", &Cfg::DBG::performanceTest);
@@ -179,6 +179,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::Checkbox("ESP Lines Allies", &Cfg::ESP::alliesLines);
 	ImGui::Checkbox("ESP Vehicles Lines", &Cfg::ESP::linesVehicles);
 	ImGui::Checkbox("ESP Spectators", &Cfg::ESP::spectators);
+	ImGui::Checkbox("Stats", &Cfg::Misc::showStats);
 	ImGui::Checkbox("Aimbot", &Cfg::AimBot::enable);
 	ImGui::Checkbox("No Recoil", &Cfg::DBG::disableRecoil);
 	ImGui::Checkbox("No Spread", &Cfg::DBG::disableSpread);

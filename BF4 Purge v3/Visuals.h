@@ -22,6 +22,7 @@ public:
   static void RenderBombImpact(const Vector& targetPos, WeaponData_s* pDataIn = nullptr);
   static void RenderExplosives(ClientGameContext* pCtx);
   static void RenderPlayerHealth(const BoundingBox& bbEntity);
+  void RenderStats();
 
 public:
   static void RenderVisuals();
