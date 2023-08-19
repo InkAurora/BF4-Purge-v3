@@ -44,10 +44,11 @@ float Prediction::ComputeMissileFinalVelocity(float initSpd, float maxSpd, float
 bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& dst, const Vector& dstVel, const float bulletVel, const float bulletGravity, PredictionData_s* out, const float overrideTravelTime, const float zeroying, const AngularPredictionData_s* angularDataIn) {
   Vector relativePos; D3DXVec3Subtract(&relativePos, &dst, &src);
 
-  auto* pMngr = PlayerManager::GetInstance();
-  auto* pLocal = pMngr->GetLocalPlayer();
-  auto* pLSoldier = pLocal->GetSoldierEntity();
-  Vector srcVel = *pLSoldier->GetVelocity();
+  //Cfg::DBG::testString = to_string(dstVel.x) + " " + to_string(dstVel.y) + " " + to_string(dstVel.z);
+
+  auto pLocal = PlayerManager::GetInstance()->GetLocalPlayer();
+  auto pLSoldier = pLocal->GetSoldierEntity();
+  auto srcVel = *pLSoldier->GetVelocity();
 
   if (angularDataIn && angularDataIn->valid)
 	Cfg::DBG::_internalUseCurve = D3DXVec3LengthSq(&angularDataIn->angularVelocity) != 0.0f;
@@ -130,7 +131,7 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 
 	if (zeroying != 0.0f) theta += zeroying;
 
-	Cfg::DBG::testString = to_string(zeroying);
+	//Cfg::DBG::testString = to_string(zeroying);
 
 	PreUpdate::angleY = theta;
 
@@ -138,7 +139,7 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 
 	p.y = correctedY;
 	
-	//Cfg::DBG::testString += " " + to_string(p.y);
+	//Cfg::DBG::testString = to_string(p.y);
 
 	//Cfg::DBG::testString = to_string(roots2[0].real()) + "  " + to_string(roots2[1].real());
 
@@ -268,8 +269,12 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
   return true;
 }
 
+static int framecount = 0;
+
 bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarget, const Vector& aimPoint, PredictionData_s* dataOut, VeniceClientMissileEntity* pDataIn, WeaponData_s* pWeaponData) {
   if (!IsValidPtr(pLocal) || !IsValidPtr(pTarget)) return false;
+
+  framecount++;
 
   auto pLocalSoldier = pLocal->GetSoldierEntity();
   if (!pLocalSoldier) return false;
@@ -313,10 +318,8 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
   float overrideRocketTravelTime = 0.0f;
   auto pFiring = pLocalSoldier->GetFiringData();
   if (IsValidPtr(pFiring) && IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData)) {
-	if (IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData) &&
-	  pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
-	  == ProjectileEntityData::AntHitReactionWeaponType_Explosion) //Launcher check
-	{
+	if (pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
+	  == ProjectileEntityData::AntHitReactionWeaponType_Explosion) { //Launcher check
 	  auto pMissileData = reinterpret_cast<MissileEntityData*>(pFiring->m_ShotConfigData.m_ProjectileData);
 	  if (IsValidPtr(pMissileData) && !pLocal->InVehicle() && weaponType == WeaponClass::At) {
 		const auto isLG = pMissileData->IsLaserGuided();

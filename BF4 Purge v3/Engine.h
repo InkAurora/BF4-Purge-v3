@@ -1354,6 +1354,9 @@ class IPhysicsRayCaster {
 public:
   enum class RayCastFlags {
     NoCheck = 0,
+    CHECKMESH = 0x1,
+    NOWATER = 0x4,
+    NOTERRAIN = 0x8,
     CheckDetailMesh = 0x0DB,
     IsAsyncRaycast = 0x2,
     DontCheckWater = 0x0FD,
@@ -1463,8 +1466,12 @@ public:
   ClientSoldierEntity* GetSoldierEntity();
   ClientControllableEntity* GetVehicleEntity();
   ClientVehicleEntity* GetClientVehicleEntity();
-  void GetWeaponShootSpace(Matrix* const out);
+  bool GetWeaponTransform(Matrix& out);
+  bool GetWeaponShootSpace(Matrix& out);
   bool GetCurrentWeaponData(WeaponData_s* pDataOut);
+  bool GetBone(int BoneId, D3DXVECTOR3& BoneOut);
+  bool IsVisible(Matrix from, int boneId);
+  bool IsAimingAtYou(ClientPlayer* pLocal);
 
 };//Size=0x14D8
 

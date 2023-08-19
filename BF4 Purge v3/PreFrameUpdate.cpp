@@ -16,6 +16,16 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
 	//}
  // }
 
+  static int framecount = 0;
+
+  if (framecount == 0) {
+	Misc::QPC(true);
+	framecount++;
+  } else if (Misc::QPC(false) > 1000) {
+	G::inputFPS = framecount;
+	framecount = 0;
+  } else framecount++;
+
   auto pDxRenderer = DxRenderer::GetInstance();
   if (!IsValidPtr(pDxRenderer)) return result;
   auto pScreen = pDxRenderer->m_pScreen;

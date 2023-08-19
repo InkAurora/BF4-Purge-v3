@@ -9,6 +9,8 @@ namespace DX {
 }
 
 namespace G {
+  int           FPS = 0;
+  int           inputFPS = 0;
   bool			isMenuVisible = false;
   bool			shouldExit = false;
   ImVec2		screenSize = { -1, -1 };
@@ -29,6 +31,5 @@ namespace PreUpdate {
 
   bool isValid;
   bool isPredicted;
-  double perf = 0;
   float angleY;
 }

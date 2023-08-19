@@ -130,14 +130,16 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  return p_present(p_swap_chain, sync_interval, flags);
   }
 
-  // PERFORMANCE TESTING
-  if (Cfg::DBG::performanceTest) {
-	if (frameCount == 75) {
-	  PreUpdate::perf = QPC(false);
-	  frameCount = 0;
-	  QPC(true);
-	} else {
-	  frameCount++;
+  static int framecount = 0;
+
+  if (framecount == 0) {
+	Misc::QPC(true);
+	framecount++;
+  } else if (Misc::QPC(false) > 1000) {
+	G::FPS = framecount;
+	framecount = 0;
+  } else framecount++;
+
   if (GetAsyncKeyState(VK_INSERT) & 0x1) G::isMenuVisible = !G::isMenuVisible;
   if (GetAsyncKeyState(VK_END) & 0x8000) G::shouldExit = true;
 
@@ -197,6 +199,11 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 
 	ImGui::End();
   }
+
+  string fps = "FPS: " + to_string(G::FPS) + "        " + "BIN_FPS: " + to_string(G::inputFPS);
+  Renderer::DrawString({ 50 - 32, 9 - 2 }, StringFlag::CENTER_Y, ImColor::Black(), fps.c_str());
+  Renderer::DrawString({ 50 - 30, 9 }, StringFlag::CENTER_Y, ImColor(223, 32, 32), fps.c_str());
+
 
   ImGuiIO& io = ImGui::GetIO();
 

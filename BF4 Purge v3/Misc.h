@@ -69,6 +69,8 @@ public:
 
   static float Distance2D(const D3DXVECTOR2& src, const D3DXVECTOR2& dst);
 
+  static double QPC(bool mode);
+
   static void Send(LPVOID lparam);
 
   static void ReadBytes(DWORD64 address, void* destination, SIZE_T size);

@@ -298,6 +298,23 @@ float Misc::Distance2D(const D3DXVECTOR2& src, const D3DXVECTOR2& dst) {
   return D3DXVec2Length(&ret);
 }
 
+LARGE_INTEGER start, stop, freq;
+
+double Misc::QPC(bool mode) {
+  if (mode) {
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+  } else if (!mode) {
+	QueryPerformanceCounter(&stop);
+	LONGLONG diff = stop.QuadPart - start.QuadPart;
+	double duration = (double)diff * 1000 / (double)freq.QuadPart;
+
+	return duration;
+  }
+
+  return 0;
+}
+
 void Misc::Send(LPVOID lparam) {
   int mode = 0;
   CHAR* keyParam = static_cast<CHAR*>(lparam);

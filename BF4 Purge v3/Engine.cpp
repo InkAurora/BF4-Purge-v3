@@ -235,10 +235,85 @@ ClientVehicleEntity* ClientPlayer::GetClientVehicleEntity() {
   return nullptr;
 }
 
-void ClientPlayer::GetWeaponShootSpace(Matrix* const out) {
-  auto pFire = *(D3DXMATRIX**)OFFSET_WEAPONSHOOTSPACE;
-  //?????
+bool ClientPlayer::GetWeaponTransform(Matrix& out) {
+  ClientSoldierEntity* pSoldier = this->GetSoldierEntity();
+  if (!IsValidPtr(pSoldier) || !IsValidPtr(pSoldier->m_pWeaponComponent)) return false;
+  if (!IsValidPtr(pSoldier->m_pWeaponComponent->m_WeaponTransform)) return false;
+  out = pSoldier->m_pWeaponComponent->m_WeaponTransform;
+  return true;
 }
+
+bool ClientPlayer::GetWeaponShootSpace(Matrix& out) {
+  ClientSoldierEntity* pSoldier = this->GetSoldierEntity();
+  if (!IsValidPtr(pSoldier) || !IsValidPtr(pSoldier->m_pWeaponComponent)) return false;
+  SoldierWeapon* pWeaponC = pSoldier->m_pWeaponComponent->GetActiveSoldierWeapon();
+  if (IsBadPtr((intptr_t*)pWeaponC) || IsBadPtr((intptr_t*)pWeaponC->m_pWeapon)) return false;
+  out = pWeaponC->m_pWeapon->m_ShootSpace;
+  return true;
+}
+
+bool ClientPlayer::GetBone(int BoneId, D3DXVECTOR3& BoneOut) {
+  auto pSoldier = this->GetSoldierEntity();
+  if (!IsValidPtr(pSoldier)) return false;
+  if (!pSoldier->IsAlive()) return false;
+  if (!IsValidPtr(pSoldier->m_pRagdollComponent)) return false;
+  auto pRagdoll = pSoldier->m_pRagdollComponent;
+  UpdatePoseResultData PoseResult = pRagdoll->m_PoseResultData;
+  if (PoseResult.m_ValidTransforms) {
+    QuatTransform* pQuat = PoseResult.m_ActiveWorldTransforms;
+    if (!pQuat)
+      return false;
+
+    D3DXVECTOR4 Bone = pQuat[BoneId].m_TransAndScale;
+    BoneOut = D3DXVECTOR3(Bone.x, Bone.y, Bone.z);
+    return true;
+  }
+  return false;
+}
+
+
+
+
+
+
+
+
+}
+
+//bool ClientPlayer::IsAimingAtYou(ClientPlayer* pLocal) {
+//  D3DXVECTOR3 vLocal;
+//
+//  float fMaxAngle = 999;
+//  float fAimingPercent;
+//
+//  D3DXVECTOR3 vTarget;
+//
+//  this->GetBone(UpdatePoseResultData::BONES::Head, vTarget);
+//
+//  D3DXVECTOR3 vDistance = vLocal - vTarget;
+//  D3DXVec3Normalize(&vDistance, &vDistance);
+//
+//  D3DXMATRIX  mH;
+//
+//  D3DXMatrixMultiply(&mH, this->SoldierObj->PlayerInfo->Skeleton3p->matrices[6], &pTarget->SoldierObj->PlayerInfo->object_matrix);
+//
+//  D3DXVECTOR3 vRight(mH._11, mH._12, mH._13);
+//  D3DXVECTOR3 vUp(mH._21, mH._22, mH._23);
+//  D3DXVECTOR3 vForward(mH._31, mH._32, mH._33);
+//
+//  float fAngle = D3DXToDegree(acos(D3DXVec3Dot(&vForward, &vDistance)));
+//
+//  if (fMaxAngle > fAngle && fAngle <= 60) {
+//    fMaxAngle = fAngle;
+//    fAimingPercent = 100 - (fMaxAngle * (100 / 60));
+//  }
+//
+//  if (fMaxAngle != 999) {
+//    char cPlayerAim[120];
+//    sprintf(cPlayerAim, "Enemy is aiming at you %.0f %%", fAimingPercent);
+//    Draw.Text(cPlayerAim, Viewport.Width / 2 - (strlen(cPlayerAim) * 3), 15, dRed, pDefaultFont, 1);
+//  }
+//}
 
 WeaponZeroingEntry ZeroingModifier::GetZeroLevelAt(int index) {
   if (index > -1)

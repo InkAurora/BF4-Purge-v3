@@ -13,6 +13,8 @@ namespace DX {
 }
 
 namespace G {
+  extern int FPS;
+  extern int inputFPS;
   extern bool isMenuVisible;
   extern bool shouldExit;
   extern ImVec2 screenSize;
@@ -39,6 +41,5 @@ namespace PreUpdate {
 
   extern bool isValid;
   extern bool isPredicted;
-  extern double perf;
   extern float angleY;
 }
