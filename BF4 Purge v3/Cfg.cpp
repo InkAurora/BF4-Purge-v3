@@ -69,11 +69,12 @@ namespace Cfg {
 
   namespace AimBot {
 	bool enable = false;
+	UpdatePoseResultData::BONES bone = UpdatePoseResultData::BONES::Head;
 	bool autoTrigger = false;
 	bool teslaAutoPilot = false;
 	float _internalSens = 12.f;
 	float radius = (float)ESP::predictionCrossRadius * 3;
-	float smoothSoldier = 4.f;
+	float smoothSoldier = 3.2f;
 	float smoothVehicle = 2.5f;
 
 	float smoothTV = 1.f;

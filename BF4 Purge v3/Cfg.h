@@ -71,6 +71,7 @@ namespace Cfg {
 
   namespace AimBot {
 	extern bool enable;
+	extern UpdatePoseResultData::BONES bone;
 	extern bool autoTrigger;
 	extern bool teslaAutoPilot;
 	extern float _internalSens;

@@ -187,11 +187,13 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::Checkbox("ESP Spectators", &Cfg::ESP::spectators);
 	ImGui::Checkbox("Stats", &Cfg::Misc::showStats);
 	ImGui::Checkbox("Aimbot", &Cfg::AimBot::enable);
-	ImGui::Checkbox("No Recoil", &Cfg::DBG::disableRecoil);
-	ImGui::Checkbox("No Spread", &Cfg::DBG::disableSpread);
-	ImGui::Checkbox("Radar", &Cfg::ESP::Radar::enable);
-	if (Cfg::DBG::testString != "") ImGui::Text(Cfg::DBG::testString.c_str());
-
+	ImGui::SliderFloat("##s", &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, "Smoothing: %.1f");
+	ImGui::SliderFloat("##v", &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, "S. Vehicle: %.1f");
+	static int selected = UpdatePoseResultData::BONES::Neck;
+	ImGui::RadioButton("Head", &selected, UpdatePoseResultData::BONES::Head); ImGui::SameLine();
+	ImGui::RadioButton("Neck", &selected, UpdatePoseResultData::BONES::Neck); ImGui::SameLine();
+	ImGui::RadioButton("Spine", &selected, UpdatePoseResultData::BONES::Spine2);
+	Cfg::AimBot::bone = (UpdatePoseResultData::BONES)selected;
 
 	ImGui::End();
   }

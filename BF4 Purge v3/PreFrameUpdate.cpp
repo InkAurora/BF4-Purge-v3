@@ -42,8 +42,8 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   if (IsBadPtr((intptr_t*)d.pBestTarget)) return result;
 
   if (auto pTargetSoldier = d.pBestTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
-	if (!pTargetSoldier->IsAlive()) return 1;
-	if (!IsValidPtr(pTargetSoldier->m_pRagdollComponent) || !pTargetSoldier->m_pRagdollComponent->GetBone(UpdatePoseResultData::Head, aimPoint)) {
+	if (!pTargetSoldier->IsAlive()) return result;
+	if (!IsValidPtr(pTargetSoldier->m_pRagdollComponent) || !pTargetSoldier->m_pRagdollComponent->GetBone(Cfg::AimBot::bone, aimPoint)) {
 	  if (auto pVehicle = d.pBestTarget->GetVehicleEntity(); d.pBestTarget->InVehicle() && IsValidPtr(pVehicle)) {
 		BoundingBox3D aabb3D;
 		Visuals::GetEntityAABB(pVehicle, &aabb3D);
