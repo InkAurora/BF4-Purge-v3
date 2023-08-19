@@ -68,11 +68,11 @@ LRESULT __stdcall HooksManager::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 	case WM_MOUSEMOVE: return false;
 	default:
 	  break;
-}
+	}
 	return true;
   }
   return CallWindowProc(HooksManager::Get()->oWndproc, hWnd, uMsg, wParam, lParam);
-  }
+}
 
 string testText = "";
 
