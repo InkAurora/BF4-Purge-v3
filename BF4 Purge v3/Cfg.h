@@ -98,11 +98,6 @@ namespace Cfg {
 	extern bool debugEntities;
 	extern bool jetSpeedCtrl;
 
-	extern bool disableSpread;
-	extern bool isSpreadDisabled;
-	extern bool disableRecoil;
-	extern bool isRecoilDisabled;
-
 	extern bool dbgMode;
 	extern float dbgPos[3];
 
@@ -120,5 +115,15 @@ namespace Cfg {
 	extern unsigned int _internalFFSS;
 
 	extern char spoofedName[16];
+  }
+
+  namespace Misc {
+	extern bool showStats;
+	extern bool minimapSpot;
+	extern bool isMinimapSpotted;
+	extern bool disableSpread;
+	extern bool isSpreadDisabled;
+	extern bool disableRecoil;
+	extern bool isRecoilDisabled;
   }
 }

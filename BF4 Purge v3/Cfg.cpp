@@ -96,11 +96,6 @@ namespace Cfg {
 	bool debugEntities = false;
 	bool jetSpeedCtrl = true;
 
-	bool disableSpread = false;
-	bool isSpreadDisabled = false;
-	bool disableRecoil = false;
-	bool isRecoilDisabled = false;
-
 	bool dbgMode = false;
 	float dbgPos[3] = { 0.0f, 0.0f, 0.0f };
 
@@ -117,5 +112,15 @@ namespace Cfg {
 	bool _internalRestore = false;
 	char _internalName[16];
 	char spoofedName[16];
+  }
+
+  namespace Misc {
+	bool showStats = true;
+	bool minimapSpot = true;
+	bool isMinimapSpotted = false;
+	bool disableSpread = true;
+	bool isSpreadDisabled = false;
+	bool disableRecoil = true;
+	bool isRecoilDisabled = false;
   }
 }
