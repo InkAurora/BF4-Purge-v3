@@ -297,40 +297,28 @@ bool ClientPlayer::IsVisible(Matrix shootSpace, int boneId) {
   return false;
 }
 
-//bool ClientPlayer::IsAimingAtYou(ClientPlayer* pLocal) {
-//  D3DXVECTOR3 vLocal;
-//
-//  float fMaxAngle = 999;
-//  float fAimingPercent;
-//
-//  D3DXVECTOR3 vTarget;
-//
-//  this->GetBone(UpdatePoseResultData::BONES::Head, vTarget);
-//
-//  D3DXVECTOR3 vDistance = vLocal - vTarget;
-//  D3DXVec3Normalize(&vDistance, &vDistance);
-//
-//  D3DXMATRIX  mH;
-//
-//  D3DXMatrixMultiply(&mH, this->SoldierObj->PlayerInfo->Skeleton3p->matrices[6], &pTarget->SoldierObj->PlayerInfo->object_matrix);
-//
-//  D3DXVECTOR3 vRight(mH._11, mH._12, mH._13);
-//  D3DXVECTOR3 vUp(mH._21, mH._22, mH._23);
-//  D3DXVECTOR3 vForward(mH._31, mH._32, mH._33);
-//
-//  float fAngle = D3DXToDegree(acos(D3DXVec3Dot(&vForward, &vDistance)));
-//
-//  if (fMaxAngle > fAngle && fAngle <= 60) {
-//    fMaxAngle = fAngle;
-//    fAimingPercent = 100 - (fMaxAngle * (100 / 60));
-//  }
-//
-//  if (fMaxAngle != 999) {
-//    char cPlayerAim[120];
-//    sprintf(cPlayerAim, "Enemy is aiming at you %.0f %%", fAimingPercent);
-//    Draw.Text(cPlayerAim, Viewport.Width / 2 - (strlen(cPlayerAim) * 3), 15, dRed, pDefaultFont, 1);
-//  }
-//}
+bool ClientPlayer::IsAimingAtYou(ClientPlayer* pLocal, float &anglePercentOut) { // Credits to TIGERHax & A200K
+  auto pGameRenderer = GameRenderer::GetInstance();
+  if (!IsValidPtr(pGameRenderer) || !IsValidPtr(pGameRenderer->m_pRenderView)) return false;
+  Vector vLocal = (Vector)&pGameRenderer->m_pRenderView->m_ViewInverse._41;
+
+  Matrix wTransform; GetWeaponTransform(wTransform);
+
+  Vector vTarget = (Vector)&wTransform._41;
+  Vector vForward = (Vector)&wTransform._31;
+  
+  Vector vDistance = vLocal - vTarget;
+  D3DXVec3Normalize(&vDistance, &vDistance);
+
+  float fAngle = D3DXToDegree(acos(D3DXVec3Dot(&vForward, &vDistance)));
+
+  if (fAngle <= 60) {
+    anglePercentOut = 100 - (fAngle * (100.0f / 60));
+    return true;
+  }
+
+  return false;
+}
 
 WeaponZeroingEntry ZeroingModifier::GetZeroLevelAt(int index) {
   if (index > -1)

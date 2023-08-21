@@ -667,6 +667,11 @@ void Visuals::RenderVisuals() {
 
   //Cfg::ESP::validPlayers = "";
 
+  float aimingPercentMax = 0;
+  ClientPlayer* pPlayerAimingAtYou = nullptr;
+
+  Matrix shootSpace; pLocal->GetWeaponShootSpace(shootSpace);
+
   for (int i = 0; i < 70; i++) {
 
 	ClientPlayer* pPlayer = pPlayerMgr->GetPlayerById(i);
@@ -839,16 +844,34 @@ void Visuals::RenderVisuals() {
 	//Search for closest player to center of the screen
 	if (!targetLock) {
 	  if (PreUpdate::preUpdatePlayersData.visiblePlayers[i] || pPlayer->InVehicle()) {
-	  if (delta < longestDelta && !isInTeam) {
-		longestDelta = delta;
-		pTargetPlayer = pPlayer;
-		aimPoint3D = tmpAimPoint3D;
-		targetID = i;
+		if (delta < longestDelta && !isInTeam) {
+		  longestDelta = delta;
+		  pTargetPlayer = pPlayer;
+		  aimPoint3D = tmpAimPoint3D;
+		  targetID = i;
+		}
 	  }
-	}
 	}
 	else if (IsValidPtr(pPlayer) && (i == targetID))
 	  aimPoint3D = tmpAimPoint3D;
+
+	float aimingPercent = 0;
+	if (pPlayer->IsAimingAtYou(pLocal, aimingPercent) && PreUpdate::preUpdatePlayersData.visiblePlayers[i]) {
+	  if (aimingPercent > aimingPercentMax) {
+		aimingPercentMax = aimingPercent;
+		pPlayerAimingAtYou = pPlayer;
+	  }
+	}
+  }
+
+  if (aimingPercentMax > 50 && !IsBadPtr((intptr_t*)pPlayerAimingAtYou)) {
+	Renderer::DrawString(
+	  { G::screenSize.x / 2, G::screenSize.y / 2 - 100 }, 0, ImColor(230, 30, 30),
+	  xorstr_("%s is aiming at you %.0f%%"), pPlayerAimingAtYou->m_Name, aimingPercentMax
+	);
+	Vector vPos; pPlayerAimingAtYou->GetBone(UpdatePoseResultData::BONES::Head, vPos);
+	Vector2D vPos2D; WorldToScreen(vPos, vPos2D);
+	Renderer::DrawLine(G::screenCenter, vPos2D, ImColor(230, 30, 30, 130));
   }
 
   RenderBombImpact(aimPoint3D, &PreUpdate::weaponData);
@@ -868,7 +891,6 @@ void Visuals::RenderVisuals() {
 	return;
   }
 
-  auto& preUpd = PreUpdate::preUpdatePlayersData;
   preUpd.pBestTarget = pTargetPlayer;
   preUpd.pMyMissile = pMyMissile;
 

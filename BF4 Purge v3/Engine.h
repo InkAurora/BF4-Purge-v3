@@ -1479,7 +1479,7 @@ public:
   bool GetCurrentWeaponData(WeaponData_s* pDataOut);
   bool GetBone(int BoneId, D3DXVECTOR3& BoneOut);
   bool IsVisible(Matrix from, int boneId);
-  bool IsAimingAtYou(ClientPlayer* pLocal);
+  bool IsAimingAtYou(ClientPlayer* pLocal, float &anglePercentOut);
 
 };//Size=0x14D8
 
