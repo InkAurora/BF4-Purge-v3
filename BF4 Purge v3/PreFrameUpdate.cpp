@@ -61,7 +61,7 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
 
   Vector aimPoint = ZERO_VECTOR;
   auto& d = PreUpdate::preUpdatePlayersData;
-  if (IsBadPtr((intptr_t*)d.pBestTarget)) return result;
+  if (!IsValidPtr(d.pBestTarget)) return result;
 
   if (auto pTargetSoldier = d.pBestTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
 	if (!pTargetSoldier->IsAlive()) return result;

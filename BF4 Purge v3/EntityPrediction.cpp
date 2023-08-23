@@ -289,7 +289,7 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
   if (auto pVehicle = pTarget->GetClientVehicleEntity(); IsValidPtr(pVehicle)) {
 	targetVelocity = pVehicle->m_VelocityVec;
 
-	if (!IsBadPtr((intptr_t*)pVehicle->GetChassisComponent())) {
+	if (IsValidPtr(pVehicle->GetChassisComponent())) {
 	  Matrix modelMatrix;
 	  pVehicle->GetTransform(&modelMatrix);
 	  D3DXQuaternionRotationMatrix(&angularData.orientation, &modelMatrix);
@@ -389,12 +389,12 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
   //Zeroing fix
   float zeroEntry = 0.0f;
   if (auto pWeaponComp = pLocalSoldier->m_pWeaponComponent; IsValidPtr(pWeaponComp) && !pLocal->InVehicle()) {
-	if (auto pWeapon = pWeaponComp->GetActiveSoldierWeapon(); !IsBadPtr((intptr_t*)pWeapon)) {
-	  if (auto pClientWeapon = pWeapon->m_pWeapon; !IsBadPtr((intptr_t*)pClientWeapon) && IsValidPtr(pClientWeapon->m_pWeaponModifier)) {
+	if (auto pWeapon = pWeaponComp->GetActiveSoldierWeapon(); IsValidPtr(pWeapon)) {
+	  if (auto pClientWeapon = pWeapon->m_pWeapon; IsValidPtr(pClientWeapon) && IsValidPtr(pClientWeapon->m_pWeaponModifier)) {
 		auto ZeroEntry = WeaponZeroingEntry(-1.0f, -1.0f);
 
 		auto* pZeroing = pClientWeapon->m_pWeaponModifier->m_ZeroingModifier;
-		if (!IsBadPtr((intptr_t*)pZeroing)) {
+		if (IsValidPtr(pZeroing)) {
 		  int m_ZeroLevelIndex = pWeaponComp->m_ZeroingDistanceLevel;
 		  ZeroEntry = pZeroing->GetZeroLevelAt(m_ZeroLevelIndex);
 		}

@@ -26,6 +26,7 @@
 #define OFFSET_DXRENDERER				0x142738080	//checked 1.07.2021
 #define OFFSET_CLIENTGAMECONTEXT		0x142670d80 //Checked 1.07.2021
 #define OFFSET_GAMERENDERER				0x142672378	//checked 1.07.2021
+#define OFFSET_SYNCEDBFSETTINGS         0x1423717C0
 
 
 #define OFFSET_WEAPONSHOOTSPACE OFFSET_PPCURRENTWEAPONFIRING + 0x28 //Weapon shootspace
@@ -48,26 +49,14 @@ typedef D3DXQUATERNION Quaternion;
 #else
 #define _PTR_MAX_VALUE ((PVOID)0xFFF00000)
 #endif
-__forceinline bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < _PTR_MAX_VALUE) && p != nullptr; }
-//__forceinline int filterException(int code, PEXCEPTION_POINTERS ex) {
-//  return EXCEPTION_EXECUTE_HANDLER;
-//}
-//__forceinline bool IsBadPtr(intptr_t* p) {
-//  __try {
-//    if (p == nullptr) return true;
-//    volatile auto result = *p;
-//  } __except(filterException(GetExceptionCode(), GetExceptionInformation())) {
-//    return true;
-//  }
-//  return false;
-//}
-__forceinline bool IsBadPtr(intptr_t* p) {
+//__forceinline bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < _PTR_MAX_VALUE) && p != nullptr; }
+__forceinline bool IsValidPtr(PVOID p) {
   __try {
     volatile auto result = *(volatile char*)p;
   } __except (EXCEPTION_EXECUTE_HANDLER) {
-    return true;
+    return false;
   }
-  return false;
+  return true;
 }
 
 
@@ -173,6 +162,7 @@ class ViewAnglesClass;
 class AxisAlignedBox;
 class ID3D11Device;
 class ID3D11DeviceContext;
+class SyncedBFSettings;
 #pragma endregion
 
 template< class T > class WeakPtr {
@@ -3611,8 +3601,7 @@ public:
   bool m_SomeBool; //0x00C0 Always == true
 }; //Size: 0x00C1
 
-class ClientWarningSystemComponent// : public ClientGameComponent // size = 0x38
-{
+class ClientWarningSystemComponent { // : public ClientGameComponent // size = 0x38
 public:
   static void* GetTypeInfo() {
     return (void*)0x0000000142C2A630;

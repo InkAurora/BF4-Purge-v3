@@ -23,8 +23,9 @@ PlayerManager* PlayerManager::GetInstance() {
 }
 
 bool ClientPlayer::InVehicle() {
-  if (IsBadPtr((intptr_t*)this->m_pControlledControllable)) return false;
-  return this->InVehicleFn();
+  if (!IsValidPtr(this)) return false;
+  if (!IsValidPtr(m_pControlledControllable)) return false;
+  return InVehicleFn();
 }
 
 bool ClientPlayer::GetCurrentWeaponData(WeaponData_s* pDataOut) {
@@ -44,11 +45,11 @@ bool ClientPlayer::GetCurrentWeaponData(WeaponData_s* pDataOut) {
   //game crashes (mostly when entering the vehicle).
   //You could implemend some kind of timer and delay it when entering the vehicle but yeah, its lame.
 
-  if (IsBadPtr((intptr_t*)pWeaponFiring->m_pPrimaryFire) || ((uintptr_t)(pWeaponFiring->m_pPrimaryFire) == 0x10F00000030)) return false;
+  if (!IsValidPtr(pWeaponFiring->m_pPrimaryFire)) return false;
 
   auto pFiringData = pWeaponFiring->m_pPrimaryFire->m_FiringData;	// <--- Sometimes crash occurs here as well without any information from debugger.
 
-  if (IsBadPtr((intptr_t*)pFiringData)) return false;
+  if (!IsValidPtr(pFiringData)) return false;
 
   auto pProjData = pFiringData->m_ShotConfigData.m_ProjectileData;
   if (!IsValidPtr(pProjData)) return false;
@@ -164,15 +165,15 @@ bool VehicleData::IsInHeli() {
 }
 
 std::string ClientControllableEntity::GetVehicleName() {
-  if (!IsValidPtr(this->m_pData) || !this->m_pData->m_NameID) return "";
-  std::string name = this->m_pData->m_NameID;
+  if (!IsValidPtr(m_pData) || !m_pData->m_NameID) return "";
+  std::string name = m_pData->m_NameID;
   if (name.size() >= 11) return name.substr(11);
   return name;
 }
 
 bool ClientControllableEntity::IsAlive() {
-  if (IsBadPtr((intptr_t*)this)) return false;
-  if (IsBadPtr((intptr_t*)m_pHealthComp)) return false;
+  if (!IsValidPtr(this)) return false;
+  if (!IsValidPtr(m_pHealthComp)) return false;
   if (m_pHealthComp->m_Health > 0.0f) return true;
   return false;
 }
@@ -202,7 +203,7 @@ FiringFunctionData* ClientSoldierEntity::GetFiringData() {
   auto p = WeaponFiring::GetInstance();
 
   if (!IsValidPtr(p)) return nullptr;
-  if (IsBadPtr((intptr_t*)p->m_pPrimaryFire)) return nullptr;
+  if (!IsValidPtr(p->m_pPrimaryFire)) return nullptr;
   if (!IsValidPtr(p->m_pPrimaryFire->m_FiringData)) return nullptr;
 
   return p->m_pPrimaryFire->m_FiringData;
@@ -246,7 +247,7 @@ bool ClientPlayer::GetWeaponShootSpace(Matrix& out) {
   ClientSoldierEntity* pSoldier = this->GetSoldierEntity();
   if (!IsValidPtr(pSoldier) || !IsValidPtr(pSoldier->m_pWeaponComponent)) return false;
   SoldierWeapon* pWeaponC = pSoldier->m_pWeaponComponent->GetActiveSoldierWeapon();
-  if (IsBadPtr((intptr_t*)pWeaponC) || IsBadPtr((intptr_t*)pWeaponC->m_pWeapon)) return false;
+  if (!IsValidPtr(pWeaponC) || !IsValidPtr(pWeaponC->m_pWeapon)) return false;
   out = pWeaponC->m_pWeapon->m_ShootSpace;
   return true;
 }
@@ -324,7 +325,7 @@ WeaponZeroingEntry ZeroingModifier::GetZeroLevelAt(int index) {
   if (index > -1)
     return m_ppZeroLevels[index];
   else
-    if (IsBadPtr((intptr_t*)this)) return WeaponZeroingEntry(0.0f, 0.0f);
+    if (!IsValidPtr(this)) return WeaponZeroingEntry(0.0f, 0.0f);
     return WeaponZeroingEntry(m_DefaultZeroingDistance, 0.0f);
 }
 
@@ -373,7 +374,7 @@ int SoldierWeaponComponent::GetSlot() {
 
 WeaponClass WeaponFiring::GetWeaponClass() {
   auto pData = reinterpret_cast<WeaponEntityData*>(this->m_weaponComponentData);
-  if (!IsBadPtr((intptr_t*)pData)) return pData->m_WeaponClass;
+  if (IsValidPtr(pData)) return pData->m_WeaponClass;
   return WeaponClass::None;
 }
 

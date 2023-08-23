@@ -869,7 +869,7 @@ void Visuals::RenderVisuals() {
 	}
   }
 
-  if (aimingPercentMax > 50 && !IsBadPtr((intptr_t*)pPlayerAimingAtYou)) {
+  if (aimingPercentMax > 50 && IsValidPtr(pPlayerAimingAtYou)) {
 	Renderer::DrawString(
 	  { G::screenSize.x / 2, G::screenSize.y / 2 - 100 }, 0, ImColor(230, 30, 30),
 	  xorstr_("%s is aiming at you %.0f%%"), pPlayerAimingAtYou->m_Name, aimingPercentMax
