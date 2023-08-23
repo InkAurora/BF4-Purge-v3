@@ -293,6 +293,8 @@ bool ClientPlayer::IsVisible(Matrix shootSpace, int boneId) {
       return false;
     if (hit.m_material.isSeeThrough() || hit.m_material.isPenetrable())
       return true;
+    if (hit.m_rigidBody == (void*)this)
+      return true;
   }
 
   return false;

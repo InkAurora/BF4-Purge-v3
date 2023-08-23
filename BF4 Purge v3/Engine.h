@@ -1325,8 +1325,8 @@ class Material {
 public:
   enum MaterialFlag {
     MFSeeThrough = 0x1,
+    MFPenetrable = 0x8,
     MFClientDestructable = 0x40000000,
-    MFPenetrable = 0x8
   };
   UINT32 m_flagsAndIndex;
   __forceinline bool isPenetrable() {
@@ -1344,7 +1344,7 @@ public:
   void* m_rigidBody;		// 0x20
   Material m_material;	// 0x28
   DWORD m_part;			// 0x30
-  FLOAT m_lambda;			// 0x34
+  float m_lambda;			// 0x34
   char _pad[56];			// 0x38
 }; //Size = 0x0070
 
@@ -3582,9 +3582,6 @@ public:
     return reinterpret_cast<DeployScreenClass*>(*reinterpret_cast<__int64*>((*reinterpret_cast<__int64*>((*reinterpret_cast<__int64*>(0x142812040)) + 0x030)) + 0x728));
   }
 };
-
-
-
 
 class ViewAnglesClass {
 public:

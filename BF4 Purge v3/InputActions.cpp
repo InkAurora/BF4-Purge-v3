@@ -20,7 +20,6 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
   Vector2D deltaVec = G::viewPos2D - pos2D;
   PreUpdate::isValid = this->isAutoPiloting;
 
-
   if (IsValidPtr(pVeh) && IsValidPtr(pVeh->m_pData) && (int)pLocal->m_EntryId < 4) {
 	OverheatControll();
 
@@ -222,12 +221,10 @@ void InputActions::VehicleTurretControll(const Vector2D& deltaVec, float delta, 
 void InputActions::SoldierWeaponControll(float delta, const Vector targetPos) {
   if (!(GetAsyncKeyState(VK_MENU) & 0x8000) || (delta > Cfg::AimBot::radius)) return;
 
-  auto pManager = PlayerManager::GetInstance();
-  if (!IsValidPtr(pManager)) return;
+  auto* pLocal = PlayerManager::GetInstance()->GetLocalPlayer();
+  if (!IsValidPtr(pLocal)) return;
 
-  if (!IsValidPtr(pManager->GetLocalPlayer())) return;
-
-  auto* pLocalSoldier = pManager->GetLocalPlayer()->GetSoldierEntity();
+  auto* pLocalSoldier = pLocal->GetSoldierEntity();
   if (!IsValidPtr(pLocalSoldier)) return;
 
   auto* pWepComp = pLocalSoldier->m_pWeaponComponent;
