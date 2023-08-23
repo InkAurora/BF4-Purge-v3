@@ -609,9 +609,14 @@ void Visuals::RenderStats() {
 }
 
 void Visuals::RenderVisuals() {
+  if (!Cfg::ESP::enable) return;
+
   if (Cfg::Misc::showStats) RenderStats();
 
-  if (!Cfg::ESP::enable) return;
+  Renderer::DrawString({ 50 - 32, 9 - 2 }, StringFlag::CENTER_Y, ImColor::Black(),
+	xorstr_("FPS: %d        BIN_FPS: %d"), G::FPS, G::inputFPS);
+  Renderer::DrawString({ 50 - 30, 9 }, StringFlag::CENTER_Y, ImColor(223, 32, 32),
+	xorstr_("FPS: %d        BIN_FPS: %d"), G::FPS, G::inputFPS);
 
   ClientGameContext* pGameCtx = ClientGameContext::GetInstance();
 
