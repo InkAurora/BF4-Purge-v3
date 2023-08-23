@@ -3620,6 +3620,16 @@ public:
   unsigned char _0x38[0x1f0];
 }; // size = 0x228
 
+class SyncedBFSettings {
+public:
+  char pad_0000[0x54]; //0x0000
+  bool m_AllUnlocksUnlocked; //0x0054
+
+  static SyncedBFSettings* GetInstance() {
+    return *(SyncedBFSettings**)(OFFSET_SYNCEDBFSETTINGS);
+  }
+}; // size = 0x55
+
 class PredictionData_s {
 public:
   Vector hitPos;

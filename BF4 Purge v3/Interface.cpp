@@ -189,6 +189,8 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  ImGui::TableNextColumn(); ImGui::Checkbox("No Spread", &Cfg::Misc::disableSpread);
 	  ImGui::TableNextColumn(); ImGui::Checkbox("Spectator Warning", &Cfg::ESP::spectators);
 	  ImGui::TableNextColumn(); ImGui::Checkbox("Minimap Spot", &Cfg::Misc::minimapSpot);
+	  ImGui::TableNextColumn();	ImGui::Checkbox(xorstr_("Unlock All"), &Cfg::Misc::unlockAll);
+	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("debug"), &Cfg::DBG::debugVar);
 	  ImGui::EndTable();
 	}
 	ImGui::Checkbox("Radar", &Cfg::ESP::Radar::enable);

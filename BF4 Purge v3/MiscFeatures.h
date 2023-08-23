@@ -12,4 +12,5 @@ public:
   void MinimapSpot(bool state);
   void Recoil(bool state);
   void Spread(bool state);
+  void UnlockAll(bool state);
 };

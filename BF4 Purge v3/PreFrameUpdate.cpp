@@ -85,6 +85,7 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   F::pFeatures->MinimapSpot(Cfg::Misc::minimapSpot);
   F::pFeatures->Recoil(Cfg::Misc::disableRecoil);
   F::pFeatures->Spread(Cfg::Misc::disableSpread);
+  F::pFeatures->UnlockAll(Cfg::Misc::unlockAll);
 
   return result;
 }

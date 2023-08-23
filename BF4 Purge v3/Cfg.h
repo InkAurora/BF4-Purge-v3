@@ -99,6 +99,7 @@ namespace Cfg {
 	extern bool debugOutput;
 	extern bool debugEntities;
 	extern bool jetSpeedCtrl;
+	extern bool debugVar;
 
 	extern bool dbgMode;
 	extern float dbgPos[3];
@@ -127,5 +128,6 @@ namespace Cfg {
 	extern bool isSpreadDisabled;
 	extern bool disableRecoil;
 	extern bool isRecoilDisabled;
+	extern bool unlockAll;
   }
 }

@@ -46,3 +46,9 @@ void Features::Spread(bool state) {
 	Cfg::Misc::isSpreadDisabled = false;
   }
 }
+
+void Features::UnlockAll(bool state) {
+  auto pSynced = SyncedBFSettings::GetInstance();
+  if (!IsValidPtr(pSynced)) return;
+  pSynced->m_AllUnlocksUnlocked = state;
+}

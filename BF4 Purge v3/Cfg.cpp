@@ -97,6 +97,7 @@ namespace Cfg {
 	bool debugOutput = false;
 	bool debugEntities = false;
 	bool jetSpeedCtrl = true;
+	bool debugVar = false;
 
 	bool dbgMode = false;
 	float dbgPos[3] = { 0.0f, 0.0f, 0.0f };
@@ -124,5 +125,6 @@ namespace Cfg {
 	bool isSpreadDisabled = false;
 	bool disableRecoil = true;
 	bool isRecoilDisabled = false;
+	bool unlockAll = false;
   }
 }
