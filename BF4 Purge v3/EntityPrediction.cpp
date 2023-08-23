@@ -93,7 +93,7 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 	double e1 = (D3DXVec3Length(&src) * D3DXVec3Length(&src)) + (D3DXVec3Length(&dst) * D3DXVec3Length(&dst)) - (2 * D3DXVec3Dot(&src, &dst));
 
 	auto roots = solve_quartic(b1 / (a1), c1 / (a1), d1 / (a1), e1 / (a1));
-	float t = 0.0f;
+	double t = 0.0f;
 	for (int i = 0; i < 4; ++i) {
 	  if (roots[i].real() > 0.0f && (roots[i].real() < t || t == 0.0f))
 		t = roots[i].real();
@@ -115,49 +115,29 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 	float x = Misc::Distance2D({ src.x, src.z }, { p.x, p.z });
 	float h = p.y - src.y;
 	float quadratic = sqrt((v * v * v * v) - (g * (((x * x) * g) + (2 * -h * (v * v)))));
-	vector<double>roots2;
+	vector<float>roots2;
 	roots2.push_back(-atan((v * v + quadratic) / (g * x)));
 	roots2.push_back(-atan((v * v - quadratic) / (g * x)));
-
-	//Cfg::DBG::testString = to_string(bulletVel) + " " + to_string(bulletGravity) + " " + to_string(range);
-	//Cfg::DBG::testString = to_string(roots3[0].real() * (180 / PI)) + " " + to_string(roots3[1].real() * (180 / PI));
-
-	//Cfg::DBG::testString = to_string(p.y);
 	
 	float theta = -100.0f;
 	for (int i = 0; i < 2; i++) {
-	  if (roots2[i] > (-PI_2 / 2) && roots2[i] < (PI_2 / 2) && (roots2[i] < theta || theta == -100.0f)) theta = roots2[i];
+	  if (roots2[i] > (-PI_2) && roots2[i] < (PI_2) && (roots2[i] < theta || theta == -100.0f)) theta = roots2[i];
 	}
 
-	if (zeroying != 0.0f) theta += zeroying;
-
-	//Cfg::DBG::testString = to_string(zeroying);
-
-	PreUpdate::angleY = theta;
+	theta += zeroying;
 
 	float correctedY = src.y + x * tan(theta);
 
 	p.y = correctedY;
-	
-	//Cfg::DBG::testString = to_string(p.y);
 
-	//Cfg::DBG::testString = to_string(roots2[0].real()) + "  " + to_string(roots2[1].real());
-
-	// predicted vector with compenstation = P + VT + 0.5*G*T^2
 	out->hitPos.x = p.x;
 	out->hitPos.y = p.y;
 	out->hitPos.z = p.z;
-
-	//Cfg::DBG::testString += " " + to_string(out->hitPos.y);
 
 	out->bulletDrop = bulletGravity;
 	out->bulletVel = bulletVel;
 	out->distance = Misc::Distance3D(src, out->hitPos);
 	out->origin = dst;
-
-	//Fix for zeroing
-	/*if (zeroying != 0.0f)
-	  out->hitPos.y += std::sinf(zeroying) * out->distance;*/
 
 	return true;
   }
