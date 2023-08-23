@@ -630,11 +630,6 @@ void Visuals::RenderVisuals() {
 	!IsValidPtr(pLocalSoldier) ||
 	!pLocalSoldier->IsAlive()) return;
 
-  if (auto pVehicleTurret = VehicleTurret::GetInstance(); IsValidPtr(pVehicleTurret) && pLocal->InVehicle()) {
-	G::viewPos = pVehicleTurret->GetVehicleCameraOrigin();
-	WorldToScreen(pVehicleTurret->GetVehicleCrosshair(), G::viewPos2D);
-  }
-
   auto pMyMissile = GetMissileEntity(pGameCtx, pLocal);
   if (Cfg::ESP::explosives)
 	RenderExplosives(pGameCtx);
@@ -647,7 +642,7 @@ void Visuals::RenderVisuals() {
 	  prevPos += d / 6.f;
 	}
 	else { prevPos = G::viewPos2D; }
-
+	// TODO: Draw reticle based on actual world position (raycast forward vector)
 	Renderer::DrawCircleOutlined(prevPos, 5, 15, ImColor::Red());
 	Renderer::DrawRectFilled(prevPos, { prevPos.x + 1.f, prevPos.y + 1.f }, ImColor::Red());
   }

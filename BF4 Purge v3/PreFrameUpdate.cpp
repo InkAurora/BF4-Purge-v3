@@ -37,13 +37,18 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
 
   auto pGameRenderer = GameRenderer::GetInstance();
   if (!IsValidPtr(pGameRenderer) || !IsValidPtr(pGameRenderer->m_pRenderView)) return result;
-  G::viewPos = (Vector)&pGameRenderer->m_pRenderView->m_ViewInverse._41;
 
   auto pManager = PlayerManager::GetInstance();
   if (!IsValidPtr(pManager)) return result;
   auto pLocal = pManager->GetLocalPlayer();
   if (!IsValidPtr(pLocal) || !IsValidPtr(pLocal->GetSoldierEntity()) || !pLocal->GetSoldierEntity()->IsAlive())
 	return result;
+  
+  auto pVehicleTurret = VehicleTurret::GetInstance();
+  if (IsValidPtr(pVehicleTurret) && pLocal->InVehicle()) {
+	G::viewPos = pVehicleTurret->GetVehicleCameraOrigin();
+	Visuals::WorldToScreen(pVehicleTurret->GetVehicleCrosshair(), G::viewPos2D);
+  } else G::viewPos = (Vector)&pGameRenderer->m_pRenderView->m_ViewInverse._41;
 
   pLocal->GetCurrentWeaponData(&PreUpdate::weaponData);
 
