@@ -73,7 +73,6 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
   // (V^2 - S^2)T^2 + 2(PV)T + P^2 = 0
 
 
-
   // another try
   // t^4 * 0.25*|g|^2 - t^3 * g°ES + t^2 * g°BP - g°EP - BS^2 - t * 2(ES°BP - ES°EP) + |BP|^2 + |EP|^2 - 2(BP°EP) = 0
   // (° = Dot Product, |a| = Length of Vector a)
@@ -98,6 +97,8 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 	  if (roots[i].real() > 0.0f && (roots[i].real() < t || t == 0.0f))
 		t = roots[i].real();
 	}
+
+	if (overrideTravelTime > 0.0f) t = overrideTravelTime;
 
 	out->travelTime = t;
 
@@ -193,6 +194,8 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 	//return true;
  // }
 
+  // TODO: check code below
+
   const double a = (D3DXVec3Dot(&dstVel, &dstVel)) - (bulletVel * bulletVel);
   const double b = 2.0 * (D3DXVec3Dot(&relativePos, &dstVel));
   const double c = D3DXVec3Dot(&relativePos, &relativePos);
@@ -269,15 +272,16 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
   if (auto pVehicle = pTarget->GetClientVehicleEntity(); IsValidPtr(pVehicle)) {
 	targetVelocity = pVehicle->m_VelocityVec;
 
-	if (IsValidPtr(pVehicle->GetChassisComponent())) {
-	  Matrix modelMatrix;
-	  pVehicle->GetTransform(&modelMatrix);
-	  D3DXQuaternionRotationMatrix(&angularData.orientation, &modelMatrix);
-	  angularData.angularVelocity = pVehicle->GetChassisComponent()->m_AngularVelocity;
-	  angularData.valid = true;
+	if (IsValidPtr(pTarget->GetSoldierEntity()->m_pData) && pTarget->GetSoldierEntity()->m_pData->IsInJet()) {
+	  if (IsValidPtr(pVehicle->GetChassisComponent())) {
+		Matrix modelMatrix;
+		pVehicle->GetTransform(&modelMatrix);
+		D3DXQuaternionRotationMatrix(&angularData.orientation, &modelMatrix);
+		angularData.angularVelocity = pVehicle->GetChassisComponent()->m_AngularVelocity;
+		angularData.valid = true;
+	  }
 	}
-  }
-  else if (auto pTargetSoldier = pTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
+  } else if (auto pTargetSoldier = pTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
 	targetVelocity = *pTargetSoldier->GetVelocity();
 
 	//Thats the same flag you have to set to update non-visible bones.
@@ -295,7 +299,11 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 	weaponType = pWeaponFiring->GetWeaponClass();
 
   auto startPosition = G::viewPos;
-  float overrideRocketTravelTime = 0.0f;
+
+  Matrix shootSpace; pLocal->GetWeaponShootSpace(shootSpace);
+  startPosition = (Vector)&shootSpace._41;
+
+  float overrideRocketTravelTime = -1.0f;
   auto pFiring = pLocalSoldier->GetFiringData();
   if (IsValidPtr(pFiring) && IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData)) {
 	if (pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType

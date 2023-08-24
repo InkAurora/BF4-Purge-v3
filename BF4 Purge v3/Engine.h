@@ -1453,8 +1453,11 @@ public:
   char pad_0950[2681]; //0x0950
   bool m_IsSpectator; //0x13C9
   char pad_13CA[2]; //0x13CA
-  __int32 m_TeamId; //0x13CC 
-  char _0x13D0[240];
+  __int32 m_TeamId; //0x13CC
+  char _0x13D0[216];
+  ClientSoldierEntity* m_Corpse; //0x14A8 
+  ClientSoldierEntity* m_Soldier; //0x14B0 
+  ClientPlayer* m_Player; //0x14B8 
   ClientSoldierEntity* m_pAttachedControllable; //0x14C0 
   EntrySeatType m_EntryId; //0x14C8 
   ClientSoldierEntity* m_pControlledControllable; //0x14D0 
