@@ -17,14 +17,18 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
  // }
 
   static int framecount = 0;
+  G::inputFramecount++;
 
-  if (framecount == 0) {
+  static bool betweenMeasurings = false;
+  static int lastFrame;
+  if (!betweenMeasurings) {
 	Misc::QPC(true);
-	framecount++;
+	lastFrame = G::inputFramecount;
+	betweenMeasurings = true;
   } else if (Misc::QPC(false) > 1000) {
-	G::inputFPS = framecount;
-	framecount = 0;
-  } else framecount++;
+	G::inputFPS = G::inputFramecount - lastFrame;
+	betweenMeasurings = false;
+  }
 
   auto pDxRenderer = DxRenderer::GetInstance();
   if (!IsValidPtr(pDxRenderer)) return result;

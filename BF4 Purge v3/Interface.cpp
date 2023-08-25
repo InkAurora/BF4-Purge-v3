@@ -130,15 +130,18 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  return p_present(p_swap_chain, sync_interval, flags);
   }
 
-  static int framecount = 0;
+  G::framecount++;
 
-  if (framecount == 0) {
+  static bool betweenMeasurings = false;
+  static int lastFrame;
+  if (!betweenMeasurings) {
 	Misc::QPC(true);
-	framecount++;
+	lastFrame = G::framecount;
+	betweenMeasurings = true;
   } else if (Misc::QPC(false) > 1000) {
-	G::FPS = framecount;
-	framecount = 0;
-  } else framecount++;
+	G::FPS = G::framecount - lastFrame;
+	betweenMeasurings = false;
+  }
 
   if (GetAsyncKeyState(VK_INSERT) & 0x1) G::isMenuVisible = !G::isMenuVisible;
   if (GetAsyncKeyState(VK_END) & 0x8000) G::shouldExit = true;
@@ -163,6 +166,8 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   //Simple PBSS bypass
   auto ssRequest = (*(int*)(*pSSmoduleClass + 0x14) != -1);
   if (ssRequest) return p_present(p_swap_chain, sync_interval, flags);
+
+  float tempAimbotFOV = Cfg::AimBot::radius;
 
   ImGui_ImplDX11_NewFrame();
   ImGui_ImplWin32_NewFrame();
@@ -196,8 +201,9 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::Checkbox(xorstr_("Radar"), &Cfg::ESP::Radar::enable);
 	ImGui::Checkbox(xorstr_("Stats"), &Cfg::Misc::showStats);
 	ImGui::Checkbox(xorstr_("Aimbot"), &Cfg::AimBot::enable);
-	ImGui::SliderFloat(xorstr_("##s"), &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, xorstr_("Smoothing: %.1f"));
-	ImGui::SliderFloat(xorstr_("##v"), &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, xorstr_("S. Vehicle: %.1f"));
+	ImGui::SliderFloat(xorstr_("##aimbotFOV"), &Cfg::AimBot::radius, 5.0f, 200.0f, xorstr_("FOV: %1.f"));
+	ImGui::SliderFloat(xorstr_("##soldierSmoothing"), &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, xorstr_("Smoothing: %.1f"));
+	ImGui::SliderFloat(xorstr_("##vehicleSmoothing"), &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, xorstr_("S. Vehicle: %.1f"));
 	static int selected = UpdatePoseResultData::BONES::Neck;
 	ImGui::RadioButton(xorstr_("Head"), &selected, UpdatePoseResultData::BONES::Head); ImGui::SameLine();
 	ImGui::RadioButton(xorstr_("Neck"), &selected, UpdatePoseResultData::BONES::Neck); ImGui::SameLine();
@@ -205,6 +211,14 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	Cfg::AimBot::bone = (UpdatePoseResultData::BONES)selected;
 
 	ImGui::End();
+  }
+
+  static int drawEndFrame = 0;
+  if (G::framecount < drawEndFrame || Cfg::AimBot::radius != tempAimbotFOV) {
+	if (Cfg::AimBot::radius != tempAimbotFOV) {
+	  drawEndFrame = G::framecount + (G::FPS * 2);
+	}
+	Renderer::DrawCircleOutlined(G::screenCenter, Cfg::AimBot::radius, 0, ImColor::White());
   }
 
   if (Cfg::DBG::testString != "") Renderer::DrawString({ 100, 100 },

@@ -11,6 +11,8 @@ namespace DX {
 namespace G {
   int           FPS = 0;
   int           inputFPS = 0;
+  int           framecount = 0;
+  int           inputFramecount = 0;
   bool			isMenuVisible = false;
   bool			shouldExit = false;
   ImVec2		screenSize = { -1, -1 };

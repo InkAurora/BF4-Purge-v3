@@ -18,6 +18,8 @@ namespace DX {
 namespace G {
   extern int FPS;
   extern int inputFPS;
+  extern int framecount;
+  extern int inputFramecount;
   extern bool isMenuVisible;
   extern bool shouldExit;
   extern ImVec2 screenSize;
