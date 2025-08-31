@@ -129,5 +129,6 @@ namespace Cfg {
 	extern bool disableRecoil;
 	extern bool isRecoilDisabled;
 	extern bool unlockAll;
+	extern bool noOverheat;
   }
 }

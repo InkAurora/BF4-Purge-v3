@@ -175,8 +175,8 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   ImGui::NewFrame();
 
   if (G::isMenuVisible) {
-	ImGui::Begin(xorstr_("BF4 Purge v3   [unknowncheats.me]"), &G::isMenuVisible);
-	ImGui::SetWindowSize(ImVec2(480, 500), ImGuiCond_Always);
+	ImGui::Begin(xorstr_("BF4 Purge v3"), &G::isMenuVisible);
+	ImGui::SetWindowSize(ImVec2(460, 520), ImGuiCond_Always);
 	ImGui::Text(xorstr_("Options:"));
 	//ImGui::Text(Cfg::ESP::validPlayers.c_str());
 	if (ImGui::BeginTable(xorstr_("split2"), 2)) {
@@ -195,6 +195,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Spectator Warning"), &Cfg::ESP::spectators);
 	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Minimap Spot"), &Cfg::Misc::minimapSpot);
 	  ImGui::TableNextColumn();	ImGui::Checkbox(xorstr_("Unlock All"), &Cfg::Misc::unlockAll);
+	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("No Overheat"), &Cfg::Misc::noOverheat);
 	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("debug"), &Cfg::DBG::debugVar);
 	  ImGui::EndTable();
 	}
@@ -203,7 +204,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	ImGui::Checkbox(xorstr_("Aimbot"), &Cfg::AimBot::enable);
 	ImGui::SliderFloat(xorstr_("##aimbotFOV"), &Cfg::AimBot::radius, 5.0f, 200.0f, xorstr_("FOV: %1.f"));
 	ImGui::SliderFloat(xorstr_("##soldierSmoothing"), &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, xorstr_("Smoothing: %.1f"));
-	ImGui::SliderFloat(xorstr_("##vehicleSmoothing"), &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, xorstr_("S. Vehicle: %.1f"));
+	ImGui::SliderFloat(xorstr_("##vehicleSmoothing"), &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, xorstr_("Smoothing Vehicle: %.1f"));
 	static int selected = UpdatePoseResultData::BONES::Neck;
 	ImGui::RadioButton(xorstr_("Head"), &selected, UpdatePoseResultData::BONES::Head); ImGui::SameLine();
 	ImGui::RadioButton(xorstr_("Neck"), &selected, UpdatePoseResultData::BONES::Neck); ImGui::SameLine();

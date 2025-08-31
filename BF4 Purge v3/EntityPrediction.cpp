@@ -44,54 +44,25 @@ float Prediction::ComputeMissileFinalVelocity(float initSpd, float maxSpd, float
 bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& dst, const Vector& dstVel, const float bulletVel, const float bulletGravity, PredictionData_s* out, const float overrideTravelTime, const float zeroying, const AngularPredictionData_s* angularDataIn) {
   Vector relativePos; D3DXVec3Subtract(&relativePos, &dst, &src);
 
-  //Cfg::DBG::testString = to_string(dstVel.x) + " " + to_string(dstVel.y) + " " + to_string(dstVel.z);
-
   auto pLocal = PlayerManager::GetInstance()->GetLocalPlayer();
   auto pLSoldier = pLocal->GetSoldierEntity();
   auto srcVel = *pLSoldier->GetVelocity();
 
+  Vector effectiveVel; D3DXVec3Subtract(&effectiveVel, &dstVel, &srcVel);
+  Vector scaledVel;
+
   if (angularDataIn && angularDataIn->valid)
 	Cfg::DBG::_internalUseCurve = D3DXVec3LengthSq(&angularDataIn->angularVelocity) != 0.0f;
 
-  // Ballistic equation
-  // https://en.wikipedia.org/wiki/Projectile_motion
-  //
-  // (0.25*g^2)*(t^4) + (-g*vy1)*(t^3) + (vx1^2+vy1^2+vz1^2 - g*py1 - |v|^2)*(t^2) + 2*(px1*vx1+py1*vy1+pz1*vz1)*(t) + (px1^2+py1^2+pz1^2) = 0
-  // x^4 + a*x^3 + b*x^2 + c*x + d
-  //
-  // G = bullet gravity
-  // V = target velocity vector
-  // P = target position relative to shooter vector
-  // S = bullet speed 
-  // T = time to impact
-  //
-  //     a           b                c               d       e
-  // 0.25(G^2)T^4 + (VG)T^3 + (PG + V^2 - S^2)T^2 + 2(PV)T + P^2 = 0    | /e
-  //
-  // when G == 0
-  //
-  // (V^2 - S^2)T^2 + 2(PV)T + P^2 = 0
-
-
-  // another try
-  // t^4 * 0.25*|g|^2 - t^3 * g°ES + t^2 * g°BP - g°EP - BS^2 - t * 2(ES°BP - ES°EP) + |BP|^2 + |EP|^2 - 2(BP°EP) = 0
-  // (° = Dot Product, |a| = Length of Vector a)
-  // t:float = time
-  // g:Vector3 = Gravity
-  // EP : Vector3 = Enemy Position
-  // ES : Vector3 = Enemy Speed
-  // BP : Vector3 = Bullet Position(Start Position)
-  // BS : float = Bullet Speed
-
   if (bulletGravity != 0.0f) {
 	Vector gravity = { 0, bulletGravity, 0 };
-	double a1 = 0.25f * D3DXVec3Length(&gravity) * D3DXVec3Length(&gravity);
-	double b1 = D3DXVec3Dot(&gravity, &dstVel) * -1.0f;
-	double c1 = D3DXVec3Dot(&gravity, &src) - D3DXVec3Dot(&gravity, &dst) - (bulletVel * bulletVel);
-	double d1 = 2 * (D3DXVec3Dot(&dstVel, &src) - D3DXVec3Dot(&dstVel, &dst)) * -1.0f;
-	double e1 = (D3DXVec3Length(&src) * D3DXVec3Length(&src)) + (D3DXVec3Length(&dst) * D3DXVec3Length(&dst)) - (2 * D3DXVec3Dot(&src, &dst));
+	double a1 = 0.25f * D3DXVec3LengthSq(&gravity);
+	double b1 = -1.0f * D3DXVec3Dot(&gravity, &effectiveVel);
+	double c1 = -1.0f * D3DXVec3Dot(&gravity, &relativePos) + D3DXVec3LengthSq(&effectiveVel) - (bulletVel * bulletVel);
+	double d1 = 2.0f * D3DXVec3Dot(&effectiveVel, &relativePos);
+	double e1 = D3DXVec3LengthSq(&relativePos);
 
-	auto roots = solve_quartic(b1 / (a1), c1 / (a1), d1 / (a1), e1 / (a1));
+	auto roots = solve_quartic(b1 / a1, c1 / a1, d1 / a1, e1 / a1);
 	double t = 0.0f;
 	for (int i = 0; i < 4; ++i) {
 	  if (roots[i].real() > 0.0f && (roots[i].real() < t || t == 0.0f))
@@ -99,6 +70,8 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 	}
 
 	if (overrideTravelTime > 0.0f) t = overrideTravelTime;
+
+	if (t <= 0.0f) return false;
 
 	out->travelTime = t;
 
@@ -109,143 +82,67 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 		angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
 		&targetVel);
 
-	Vector p = dst + (targetVel * t) - (srcVel * t); // future target position based on time and velocity
-
-	float v = bulletVel;
-	float g = bulletGravity;
-	float x = Misc::Distance2D({ src.x, src.z }, { p.x, p.z });
-	float h = p.y - src.y;
-	float quadratic = sqrt((v * v * v * v) - (g * (((x * x) * g) + (2 * -h * (v * v)))));
-	vector<float>roots2;
-	roots2.push_back(-atan((v * v + quadratic) / (g * x)));
-	roots2.push_back(-atan((v * v - quadratic) / (g * x)));
-	
-	float theta = -100.0f;
-	for (int i = 0; i < 2; i++) {
-	  if (roots2[i] > (-PI_2) && roots2[i] < (PI_2) && (roots2[i] < theta || theta == -100.0f)) theta = roots2[i];
-	}
-
-	theta += zeroying;
-
-	float correctedY = src.y + x * tan(theta);
-
-	p.y = correctedY;
-
-	out->hitPos.x = p.x;
-	out->hitPos.y = p.y;
-	out->hitPos.z = p.z;
+	Vector futurePos;
+	scaledVel = targetVel * t;
+	D3DXVec3Add(&futurePos, &dst, &scaledVel);
+	Vector velAdjustment = srcVel * t;
+	Vector drop = gravity * (0.5f * t * t);
+	D3DXVec3Subtract(&out->hitPos, &futurePos, &velAdjustment);
+	D3DXVec3Subtract(&out->hitPos, &out->hitPos, &drop);
 
 	out->bulletDrop = bulletGravity;
 	out->bulletVel = bulletVel;
 	out->distance = Misc::Distance3D(src, out->hitPos);
 	out->origin = dst;
 
+	if (zeroying != 0.0f)
+	  out->hitPos.y += std::sinf(zeroying) * out->distance;
+
 	return true;
   }
 
- // if (bulletGravity != 0.0f) {
-	//const double a = 0.25 * bulletGravity * bulletGravity;
-	//const double b = dstVel.y * bulletGravity;
-	//const double c = (relativePos.y * bulletGravity) + D3DXVec3Dot(&dstVel, &dstVel) - (bulletVel * bulletVel);
-	//const double d = 2.0f * (D3DXVec3Dot(&relativePos, &dstVel));
-	//const double e = D3DXVec3Dot(&relativePos, &relativePos);
-
-	//out->travelTime = 0.0f;
-	//if (overrideTravelTime > 0.0f) out->travelTime = overrideTravelTime;
-
-	//if (out->travelTime == 0.0f) {
-	//  const auto& roots = solve_quartic(b / (a), c / (a), d / (a), e / (a));
-	//  for (int i = 0; i < 4; ++i) {
-	//	if (roots[i].real() > 0.0f && (out->travelTime == 0.0f || roots[i].real() < out->travelTime))
-	//	  out->travelTime = roots[i].real();
-	//  }
-	//}
-
-	//if (out->travelTime <= 0.0f) return false;
-
-	//auto targetVel = dstVel;
-	//if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
-	//  PredictFinalRotation(
-	//	dstVel, angularDataIn->angularVelocity, out->travelTime,
-	//	angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
-	//	&targetVel);
-
-	//// predicted bullet velocity vector at given time
-	//double hitVelX = (relativePos.x / out->travelTime) + targetVel.x;
-	//double hitVelY = (relativePos.y / out->travelTime) + targetVel.y - (0.5f * bulletGravity * out->travelTime);
-	//double hitVelZ = (relativePos.z / out->travelTime) + targetVel.z;
-
-	//// predicted vector with compenstation = P + VT + 0.5*G*T^2
-	//out->hitPos.x = (src.x + hitVelX * out->travelTime);
-	//out->hitPos.y = (src.y + hitVelY * out->travelTime);
-	//out->hitPos.z = (src.z + hitVelZ * out->travelTime);
-
-	////Cfg::DBG::testString += " " + to_string(out->hitPos.y);
-
-	//out->bulletDrop = bulletGravity;
-	//out->bulletVel = bulletVel;
-	//out->distance = Misc::Distance3D(src, out->hitPos);
-	//out->origin = dst;
-
-	////Fix for zeroing
-	//if (zeroying != 0.0f)
-	//  out->hitPos.y += std::sinf(zeroying) * out->distance;
-
-	//return true;
- // }
-
-  // TODO: check code below
-
-  const double a = (D3DXVec3Dot(&dstVel, &dstVel)) - (bulletVel * bulletVel);
-  const double b = 2.0 * (D3DXVec3Dot(&relativePos, &dstVel));
-  const double c = D3DXVec3Dot(&relativePos, &relativePos);
+  const double a = D3DXVec3LengthSq(&effectiveVel) - (bulletVel * bulletVel);
+  const double b = 2.0 * D3DXVec3Dot(&relativePos, &effectiveVel);
+  const double c = D3DXVec3LengthSq(&relativePos);
 
   if (a == 0.0f) return false;
-  double d = b * b - (4 * a * c);
+  double disc = b * b - (4 * a * c);
 
-  //We have to find smallest non-negative delta time
   double t = 0.f;
-  if (d > 0.f) {
-	const auto t1 = (-b - sqrt(d)) / (2 * a);
-	const auto t2 = (-b + sqrt(d)) / (2 * a);
+  if (disc > 0.f) {
+	const auto t1 = (-b - sqrt(disc)) / (2 * a);
+	const auto t2 = (-b + sqrt(disc)) / (2 * a);
 	if (t1 > 0.f && t2 > 0.f) t = std::min<double>(t1, t2);
 	else if (t1 < 0.f && t2 > 0.f) t = t2;
 	else if (t1 > 0.f && t2 < 0.f) t = t1;
 	else t = 0.f;
   }
-  else if (d == 0.0f) t = ((-b) / (2 * a));
+  else if (disc == 0.0f) t = ((-b) / (2 * a));
   else return false;
+
+  if (overrideTravelTime > 0.0f) t = overrideTravelTime;
+
+  if (t <= 0.0f) return false;
 
   out->travelTime = t;
 
-  if (overrideTravelTime > 0.0f) out->travelTime = overrideTravelTime;
-
-  if (out->travelTime <= 0.0f) return false;
-
-
-  auto targetVel = dstVel;
+  Vector targetVel = dstVel;
   if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
 	PredictFinalRotation(
 	  dstVel, angularDataIn->angularVelocity, out->travelTime,
 	  angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
 	  &targetVel);
 
-  // predicted bullet velocity vector at given time
-  double hitVelX = ((relativePos.x / out->travelTime)) + targetVel.x;
-  double hitVelY = ((relativePos.y / out->travelTime)) + targetVel.y;
-  double hitVelZ = ((relativePos.z / out->travelTime)) + targetVel.z;
-
-  // predicted vector with compenstation = P + VT + 0.5*G*T^2
-  out->hitPos.x = (src.x + hitVelX * out->travelTime);
-  out->hitPos.y = (src.y + hitVelY * out->travelTime);
-  out->hitPos.z = (src.z + hitVelZ * out->travelTime);
+  scaledVel = targetVel * t;
+  Vector futurePos; D3DXVec3Add(&futurePos, &dst, &scaledVel);
+  Vector velAdjustment = srcVel * t;
+  D3DXVec3Subtract(&out->hitPos, &futurePos, &velAdjustment);
 
   out->bulletDrop = bulletGravity;
   out->bulletVel = bulletVel;
   out->distance = Misc::Distance3D(src, out->hitPos);
   out->origin = dst;
 
-  //Fix for zeroing
   if (zeroying != 0.0f)
 	out->hitPos.y += std::sinf(zeroying) * out->distance;
 

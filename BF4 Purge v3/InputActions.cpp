@@ -21,7 +21,7 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
   PreUpdate::isValid = this->isAutoPiloting;
 
   if (IsValidPtr(pVeh) && IsValidPtr(pVeh->m_pData) && (int)pLocal->m_EntryId < 4) {
-	OverheatControll();
+	if (Cfg::Misc::noOverheat) OverheatControll();
 
 	if (pVeh->m_pData->IsAirVehicle()) {
 	  JetSpeedControll(pVeh, input);

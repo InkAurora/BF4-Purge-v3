@@ -6,7 +6,7 @@ namespace Cfg {
 	bool watermark = false;
 
 	bool enable = true;
-	bool use3DplayerBox = false;
+	bool use3DplayerBox = true;
 	bool team = false;
 	bool name = false;
 	bool spectators = true;
@@ -121,10 +121,11 @@ namespace Cfg {
 	bool showStats = true;
 	bool minimapSpot = true;
 	bool isMinimapSpotted = false;
-	bool disableSpread = true;
+	bool disableSpread = false;
 	bool isSpreadDisabled = false;
-	bool disableRecoil = true;
+	bool disableRecoil = false;
 	bool isRecoilDisabled = false;
 	bool unlockAll = false;
+	bool noOverheat = false;
   }
 }
