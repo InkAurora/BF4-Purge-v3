@@ -207,12 +207,12 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 	  == ProjectileEntityData::AntHitReactionWeaponType_Explosion) { //Launcher check
 	  auto pMissileData = reinterpret_cast<MissileEntityData*>(pFiring->m_ShotConfigData.m_ProjectileData);
 	  if (IsValidPtr(pMissileData) && !pLocal->InVehicle() && weaponType == WeaponClass::At) {
-		const auto isLG = pMissileData->IsLaserGuided();
+		const auto isTOW = pMissileData->IsTOW();
 		const auto& ignTime = pMissileData->m_EngineTimeToIgnition;
 		const auto& initSpd = pFiring->m_ShotConfigData.m_Speed.z;
 		const auto& accel = pMissileData->m_EngineStrength;
 		const auto& maxSpd = pMissileData->m_MaxSpeed;
-		startPosition = (!isLG) ? G::viewPos : (pDataIn != nullptr) ? pDataIn->m_Position : G::viewPos;
+		startPosition = (!isTOW) ? G::viewPos : (pDataIn != nullptr) ? pDataIn->m_Position : G::viewPos;
 		auto dst = Misc::Distance3D(startPosition, aimPoint);
 
 		//Calculating final velocity first time to solve 't' at given 'dst' to target
@@ -236,7 +236,7 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 
 		//Firing TOW from APC
 		if (IsValidPtr(pDataIn) && IsValidPtr(pDataIn->m_pMissileEntityData)
-		  && pDataIn->m_pMissileEntityData->IsLaserGuided()) {
+		  && pDataIn->m_pMissileEntityData->IsTOW()) {
 		  if (!refresh) { refresh = true; prevWeaponID = pWeaponData->gunID; }
 		  if (prevWeaponID == pWeaponData->gunID) {
 			//FIX that later

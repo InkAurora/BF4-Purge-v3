@@ -275,9 +275,9 @@ VeniceClientMissileEntity* Visuals::GetMissileEntity(ClientGameContext* pCtx, Cl
 
 	if (pMyMissile->m_pMissileEntityData->IsLockable()) return nullptr;
 
-	const bool isLG = pMyMissile->m_pMissileEntityData->IsLaserGuided();
+	const bool isTOW = pMyMissile->m_pMissileEntityData->IsTOW();
 
-	if (Cfg::ESP::ownMissile && isLG) {
+	if (Cfg::ESP::ownMissile && isTOW) {
 	  const auto& missileBB = GetEntityAABB((ClientControllableEntity*)pMyMissile);
 	  ImVec2 scrn = missileBB.GetMin() + missileBB.GetCenter();
 

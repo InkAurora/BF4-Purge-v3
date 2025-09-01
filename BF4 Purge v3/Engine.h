@@ -2576,7 +2576,7 @@ public:
   bool m_EnableBanking; //0x01EE
   char _0x01EF[1];
 
-  bool IsLaserGuided(); //m_MinTurnAngle > 0.0f
+  bool IsTOW(); //m_MinTurnAngle > 0.0f
   bool IsLockable(); //m_TimeToActivateGuidingSystem > 0.0f
 };
 

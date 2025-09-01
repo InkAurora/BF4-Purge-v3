@@ -350,7 +350,7 @@ Vector VehicleTurret::GetVehicleCrosshair() {
 }
 
 //m_MinTurnAngle > -1 when laser guided
-bool MissileEntityData::IsLaserGuided() {
+bool MissileEntityData::IsTOW() {
   if (m_MinTurnAngle > 0.0f) return true;
   return false;
 }

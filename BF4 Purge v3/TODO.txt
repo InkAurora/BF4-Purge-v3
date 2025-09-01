@@ -1,0 +1,4 @@
+- Add force locking aimbot
+- Add TOW force locking and soft guiding
+- Add headshot randomizer
+- Add all bones visibility check

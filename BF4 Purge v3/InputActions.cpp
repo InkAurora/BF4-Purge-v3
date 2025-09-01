@@ -199,17 +199,20 @@ void InputActions::VehicleTurretControll(const Vector2D& deltaVec, float delta, 
 
   static bool wasAiming = false;
   bool isInRange = delta <= Cfg::AimBot::radius;
+  bool isTOW = false;
 
   //Maximalize our aimbot FOV when firing TOW.
   if (IsValidPtr(pMissile)
 	&& IsValidPtr(pMissile->m_pMissileEntityData)
-	&& pMissile->m_pMissileEntityData->IsLaserGuided())
+	&& pMissile->m_pMissileEntityData->IsTOW()) {
 	isInRange = true;
+    isTOW = true;
+  }
 
   if (isInRange) {
 	wasAiming = true;
-	pM->m_Buffer.x = -deltaVec.x / Cfg::AimBot::smoothVehicle;
-	pM->m_Buffer.y = -deltaVec.y / Cfg::AimBot::smoothVehicle;
+	pM->m_Buffer.x = -deltaVec.x / (isTOW ? 5.0f : Cfg::AimBot::smoothVehicle);
+	pM->m_Buffer.y = -deltaVec.y / (isTOW ? 5.0f : Cfg::AimBot::smoothVehicle);
   }
   else if (wasAiming) {
 	wasAiming = false;
