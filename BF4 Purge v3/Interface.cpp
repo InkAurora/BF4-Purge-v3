@@ -199,7 +199,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("debug"), &Cfg::DBG::debugVar);
 	  ImGui::EndTable();
 	}
-	ImGui::Checkbox(xorstr_("Radar"), &Cfg::ESP::Radar::enable);
+	//ImGui::Checkbox(xorstr_("Radar"), &Cfg::ESP::Radar::enable);
 	ImGui::Checkbox(xorstr_("Stats"), &Cfg::Misc::showStats);
 	ImGui::Checkbox(xorstr_("Aimbot"), &Cfg::AimBot::enable);
 	ImGui::SliderFloat(xorstr_("##aimbotFOV"), &Cfg::AimBot::radius, 5.0f, 200.0f, xorstr_("FOV: %1.f"));
