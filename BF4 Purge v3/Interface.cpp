@@ -175,41 +175,53 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   ImGui::NewFrame();
 
   if (G::isMenuVisible) {
-	ImGui::Begin(xorstr_("BF4 Purge v3"), &G::isMenuVisible);
-	ImGui::SetWindowSize(ImVec2(460, 520), ImGuiCond_Always);
-	ImGui::Text(xorstr_("Options:"));
-	//ImGui::Text(Cfg::ESP::validPlayers.c_str());
-	if (ImGui::BeginTable(xorstr_("split2"), 2)) {
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Enable ESP"), &Cfg::ESP::enable);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Show Teammates"), &Cfg::ESP::team);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Lines"), &Cfg::ESP::lines);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Lines to Allies"), &Cfg::ESP::alliesLines);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("ESP Vehicles"), &Cfg::ESP::vehicles);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Lines to Vehicles"), &Cfg::ESP::linesVehicles);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("3D Boxes"), &Cfg::ESP::use3DplayerBox);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("3D Vehicles"), &Cfg::ESP::use3DvehicleBox);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("ESP Explosives"), &Cfg::ESP::explosives);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("JDAM Prediction"), &Cfg::ESP::predictionBombImpact);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("No Recoil"), &Cfg::Misc::disableRecoil);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("No Spread"), &Cfg::Misc::disableSpread);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Spectator Warning"), &Cfg::ESP::spectators);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("Minimap Spot"), &Cfg::Misc::minimapSpot);
-	  ImGui::TableNextColumn();	ImGui::Checkbox(xorstr_("Unlock All"), &Cfg::Misc::unlockAll);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("No Overheat"), &Cfg::Misc::noOverheat);
-	  ImGui::TableNextColumn(); ImGui::Checkbox(xorstr_("debug"), &Cfg::DBG::debugVar);
-	  ImGui::EndTable();
+	ImGui::Begin(xorstr_("BF4 Purge v3"), &G::isMenuVisible, ImGuiWindowFlags_AlwaysAutoResize);
+
+	if (ImGui::BeginTabBar(xorstr_("##tabs"), ImGuiTabBarFlags_None)) {
+	  if (ImGui::BeginTabItem(xorstr_("Visuals"))) {
+		ImGui::Checkbox(xorstr_("Enable ESP"), &Cfg::ESP::enable);
+		ImGui::Checkbox(xorstr_("Show Teammates"), &Cfg::ESP::team);
+		ImGui::Checkbox(xorstr_("Lines"), &Cfg::ESP::lines);
+		ImGui::Checkbox(xorstr_("Lines to Allies"), &Cfg::ESP::alliesLines);
+		ImGui::Checkbox(xorstr_("ESP Vehicles"), &Cfg::ESP::vehicles);
+		ImGui::Checkbox(xorstr_("Lines to Vehicles"), &Cfg::ESP::linesVehicles);
+		ImGui::Checkbox(xorstr_("3D Boxes"), &Cfg::ESP::use3DplayerBox);
+		ImGui::Checkbox(xorstr_("3D Vehicles"), &Cfg::ESP::use3DvehicleBox);
+		ImGui::Checkbox(xorstr_("ESP Explosives"), &Cfg::ESP::explosives);
+		ImGui::Checkbox(xorstr_("JDAM Prediction"), &Cfg::ESP::predictionBombImpact);
+        ImGui::EndTabItem();
+	  }
+
+      if (ImGui::BeginTabItem(xorstr_("Aimbot"))) {
+		ImGui::Checkbox(xorstr_("Aimbot"), &Cfg::AimBot::enable);
+		ImGui::SliderFloat(xorstr_("##aimbotFOV"), &Cfg::AimBot::radius, 5.0f, 200.0f, xorstr_("FOV: %1.f"));
+		ImGui::SliderFloat(xorstr_("##soldierSmoothing"), &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, xorstr_("Smoothing: %.1f"));
+		ImGui::SliderFloat(xorstr_("##vehicleSmoothing"), &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, xorstr_("Smoothing Vehicle: %.1f"));
+		static int selected = UpdatePoseResultData::BONES::Neck;
+		ImGui::RadioButton(xorstr_("Head"), &selected, UpdatePoseResultData::BONES::Head); ImGui::SameLine();
+		ImGui::RadioButton(xorstr_("Neck"), &selected, UpdatePoseResultData::BONES::Neck); ImGui::SameLine();
+		ImGui::RadioButton(xorstr_("Spine"), &selected, UpdatePoseResultData::BONES::Spine2);
+		Cfg::AimBot::bone = (UpdatePoseResultData::BONES)selected;
+		ImGui::EndTabItem();
+	  }
+
+	  /*if (ImGui::BeginTabItem(xorstr_("Radar"))) {
+        ImGui::Checkbox(xorstr_("Radar"), &Cfg::ESP::Radar::enable);
+	  }*/
+
+	  if (ImGui::BeginTabItem(xorstr_("Misc"))) {
+		ImGui::Checkbox(xorstr_("No Recoil"), &Cfg::Misc::disableRecoil);
+		ImGui::Checkbox(xorstr_("No Spread"), &Cfg::Misc::disableSpread);
+		ImGui::Checkbox(xorstr_("Spectator Warning"), &Cfg::ESP::spectators);
+		ImGui::Checkbox(xorstr_("Stats"), &Cfg::Misc::showStats);
+		ImGui::Checkbox(xorstr_("Minimap Spot"), &Cfg::Misc::minimapSpot);
+		ImGui::Checkbox(xorstr_("Unlock All"), &Cfg::Misc::unlockAll);
+		ImGui::Checkbox(xorstr_("No Overheat"), &Cfg::Misc::noOverheat);
+        ImGui::EndTabItem();
+	  }
+
+      ImGui::EndTabBar();
 	}
-	//ImGui::Checkbox(xorstr_("Radar"), &Cfg::ESP::Radar::enable);
-	ImGui::Checkbox(xorstr_("Stats"), &Cfg::Misc::showStats);
-	ImGui::Checkbox(xorstr_("Aimbot"), &Cfg::AimBot::enable);
-	ImGui::SliderFloat(xorstr_("##aimbotFOV"), &Cfg::AimBot::radius, 5.0f, 200.0f, xorstr_("FOV: %1.f"));
-	ImGui::SliderFloat(xorstr_("##soldierSmoothing"), &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, xorstr_("Smoothing: %.1f"));
-	ImGui::SliderFloat(xorstr_("##vehicleSmoothing"), &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, xorstr_("Smoothing Vehicle: %.1f"));
-	static int selected = UpdatePoseResultData::BONES::Neck;
-	ImGui::RadioButton(xorstr_("Head"), &selected, UpdatePoseResultData::BONES::Head); ImGui::SameLine();
-	ImGui::RadioButton(xorstr_("Neck"), &selected, UpdatePoseResultData::BONES::Neck); ImGui::SameLine();
-	ImGui::RadioButton(xorstr_("Spine"), &selected, UpdatePoseResultData::BONES::Spine2);
-	Cfg::AimBot::bone = (UpdatePoseResultData::BONES)selected;
 
 	ImGui::End();
   }

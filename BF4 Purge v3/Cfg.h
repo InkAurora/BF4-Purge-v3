@@ -74,6 +74,7 @@ namespace Cfg {
 	extern bool enable;
 	extern UpdatePoseResultData::BONES bone;
 	extern bool autoTrigger;
+	extern bool targetLock;
 	extern bool teslaAutoPilot;
 	extern float _internalSens;
 	extern float radius;

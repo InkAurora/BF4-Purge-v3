@@ -72,6 +72,7 @@ namespace Cfg {
 	bool enable = true;
 	UpdatePoseResultData::BONES bone = UpdatePoseResultData::BONES::Head;
 	bool autoTrigger = false;
+    bool targetLock = false;
 	bool teslaAutoPilot = false;
 	float _internalSens = 12.f;
 	float radius = (float)ESP::predictionCrossRadius * 3;
