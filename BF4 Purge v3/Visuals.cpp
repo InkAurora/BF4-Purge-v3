@@ -2,7 +2,8 @@
 #include "xorstr.hpp"
 #include "Cfg.h"
 
-bool targetLock = false;
+static bool targetLock = false;
+static ClientPlayer* pTargetPlayer = nullptr;
 
 struct ClassInfos_s {
   ClassInfo* MissileEntity = nullptr;
@@ -631,10 +632,11 @@ void Visuals::RenderVisuals() {
 	!pLocalSoldier->IsAlive()) return;
 
   auto pMyMissile = GetMissileEntity(pGameCtx, pLocal);
+
   if (Cfg::ESP::explosives)
 	RenderExplosives(pGameCtx);
 
-  if (Cfg::DBG::vehicleCross && pLocal->InVehicle()) {
+  if (Cfg::ESP::vehicleReticle && pLocal->InVehicle()) {
 	static auto prevPos = G::viewPos2D;
 	auto delta = Misc::GetAbsDeltaAtGivenPoints(G::viewPos2D, prevPos);
 	if (delta > 3) {
@@ -642,73 +644,55 @@ void Visuals::RenderVisuals() {
 	  prevPos += d / 6.f;
 	}
 	else { prevPos = G::viewPos2D; }
-	// TODO: Draw reticle based on actual world position (raycast forward vector)
+	// TODO: Draw reticle based on actual world position (raycast forward vector). i.e. render world3dtoscreen ray hit position
 	Renderer::DrawCircleOutlined(prevPos, 5, 15, ImColor::Red());
 	Renderer::DrawRectFilled(prevPos, { prevPos.x + 1.f, prevPos.y + 1.f }, ImColor::Red());
   }
 
-  static ClientPlayer* pTargetPlayer = nullptr;
-  static Vector			  aimPoint3D = ZERO_VECTOR;
-  static float			longestDelta = FLT_MAX;
-  static int				targetID = -1;
+  Vector aimPoint3D = ZERO_VECTOR;
+  float longestDelta = FLT_MAX;
+  static int targetID = -1;
 
-  if (!targetLock) {
+  if (!targetLock && Cfg::AimBot::enable && Cfg::AimBot::targetLock) pTargetPlayer = nullptr;
+  targetLock = Cfg::AimBot::enable && Cfg::AimBot::targetLock;
+
+  if (!targetLock || !IsValidPtr(pTargetPlayer) || !IsValidPtr(pTargetPlayer->GetSoldierEntity()) || !pTargetPlayer->GetSoldierEntity()->IsAlive()) {
 	pTargetPlayer = nullptr;
-	aimPoint3D = ZERO_VECTOR;
-	longestDelta = FLT_MAX;
 	targetID = -1;
   }
 
   float count = 0.0f;
 
-  auto& preUpd = PreUpdate::preUpdatePlayersData;
-  preUpd.pBestTarget = pTargetPlayer;
-  preUpd.pMyMissile = pMyMissile;
-
-  //Cfg::ESP::validPlayers = "";
-
   float aimingPercentMax = 0;
   ClientPlayer* pPlayerAimingAtYou = nullptr;
-
-  Matrix shootSpace; pLocal->GetWeaponShootSpace(shootSpace);
 
   for (int i = 0; i < 70; i++) {
 
 	ClientPlayer* pPlayer = pPlayerMgr->GetPlayerById(i);
 	if (!IsValidPtr(pPlayer)) continue;
 
-	/*if (Cfg::ESP::Radar::enable)
-	  RenderRadar(pLocal, pPlayer, i);*/
-
 	if (pPlayer == pLocal) continue;
-
-	//Cfg::ESP::validPlayers += to_string(i) + ", ";
 
 	bool isInTeam = pPlayer->m_TeamId == pLocal->m_TeamId;
 	if (!Cfg::ESP::team && isInTeam) continue;
 
-	//if (!isInTeam)
-	//	PlayerList::list;
+	/*if (Cfg::ESP::Radar::enable)
+	  RenderRadar(pLocal, pPlayer, i);*/
 
-	//TESTING SPECTATOR LIST!
-	{
-	  if (Cfg::ESP::spectators && pPlayer->m_IsSpectator) {
-		Renderer::DrawString({ 20, 600 + count }, 0, ImColor::Purple(), xorstr_("%s is spectating"),
-		  pPlayer->m_Name);
-		count += 15.0f;
-	  }
+	if (Cfg::ESP::spectators && pPlayer->m_IsSpectator) {
+	  Renderer::DrawString({ 20, 600 + count }, 0, ImColor::Purple(), xorstr_("%s is spectating"),
+		pPlayer->m_Name);
+	  count += 15.0f;
 	}
 
 	auto* pSoldier = pPlayer->GetSoldierEntity();
 	if (!IsValidPtr(pSoldier) || !pSoldier->IsAlive()) continue;
 
-	//Dont aim at passengers (velocity is always 0 here idk why)
-	if (pPlayer->m_EntryId == ClientPlayer::EntrySeatType::Passenger) continue;
-
 	ImColor color = isInTeam ? Cfg::ESP::teamColor : PreUpdate::preUpdatePlayersData.visiblePlayers[i] ?
 	  Cfg::ESP::enemyColorVisible : Cfg::ESP::enemyColor;
-	Vector vehicleCenter3D;
-	Vector playerHead3D;
+
+	//Dont aim at passengers (velocity is always 0 here idk why)
+	if (pPlayer->m_EntryId == ClientPlayer::EntrySeatType::Passenger) continue;
 
 	if (!pPlayer->InVehicle()) {
 	  BoundingBox3D playerBB3D;
@@ -745,7 +729,6 @@ void Visuals::RenderVisuals() {
 		const auto& vehicleBB = GetEntityAABB(pVehicle, &vehicleBB3D);
 		ImColor color = Cfg::ESP::vehicleAirColor;
 
-		//There are many hardcoded colors here which you could change to your desire
 		switch (pVehicle->m_pData->GetVehicleType()) {
 		case VehicleData::VehicleType::JET:
 		case VehicleData::VehicleType::HELIATTACK:
@@ -812,9 +795,7 @@ void Visuals::RenderVisuals() {
 	Vector tmpAimPoint3D = ZERO_VECTOR;
 	auto pRagdoll = pSoldier->m_pRagdollComponent;
 
-	//Check if we can grab players head position 
 	if (!IsValidPtr(pRagdoll) || !pRagdoll->GetBone(UpdatePoseResultData::BONES::Head, tmpAimPoint3D)) {
-	  //If not, try to get vehicle AABB center at least.
 	  if (pPlayer->InVehicle()) {
 		tmpAimPoint3D = vehicleBB3D.GetCenter();
 		ImVec2 o;
@@ -840,20 +821,23 @@ void Visuals::RenderVisuals() {
 	Vector2D aimPoint2D;
 	WorldToScreen(tmpAimPoint3D, aimPoint2D);
 	const auto delta = Misc::GetAbsDeltaAtGivenPoints(G::screenCenter, aimPoint2D);
-
-	//Search for closest player to center of the screen
-	if (!targetLock) {
-	  if (PreUpdate::preUpdatePlayersData.visiblePlayers[i] || pPlayer->InVehicle()) {
-		if (delta < longestDelta && !isInTeam) {
-		  longestDelta = delta;
-		  pTargetPlayer = pPlayer;
-		  aimPoint3D = tmpAimPoint3D;
-		  targetID = i;
-		}
+	// TODO: Add better target selection
+	if (targetID == i && targetLock && IsValidPtr(pTargetPlayer)) {
+	  //If we already have a target, just keep it
+      aimPoint3D = tmpAimPoint3D;
+    }
+	else if (delta < longestDelta && !isInTeam) {
+	  if (targetLock && !IsValidPtr(pTargetPlayer)) {
+		longestDelta = delta;
+		aimPoint3D = tmpAimPoint3D;
+		targetID = i;
+	  }
+	  else if (!targetLock && (PreUpdate::preUpdatePlayersData.visiblePlayers[i] || pPlayer->InVehicle())) {
+		longestDelta = delta;
+		aimPoint3D = tmpAimPoint3D;
+		targetID = i;
 	  }
 	}
-	else if (IsValidPtr(pPlayer) && (i == targetID))
-	  aimPoint3D = tmpAimPoint3D;
 
 	float aimingPercent = 0;
 	if (pPlayer->IsAimingAtYou(pLocal, aimingPercent) && PreUpdate::preUpdatePlayersData.visiblePlayers[i]) {
@@ -876,20 +860,17 @@ void Visuals::RenderVisuals() {
 
   RenderBombImpact(aimPoint3D, &PreUpdate::weaponData);
 
+  if (targetID != -1) pTargetPlayer = pPlayerMgr->GetPlayerById(targetID);
+
   if (!IsValidPtr(pTargetPlayer)
 	|| !IsValidPtr(pLocal)
 	|| !IsValidPtr(pTargetPlayer->GetSoldierEntity())
 	|| !pTargetPlayer->GetSoldierEntity()->IsAlive()) {
-	targetLock = false;
-	if (!targetLock) {
-	  pTargetPlayer = nullptr;
-	  aimPoint3D = ZERO_VECTOR;
-	  longestDelta = FLT_MAX;
-	  targetID = -1;
-
-	}
+	pTargetPlayer = nullptr;
 	return;
   }
+
+  auto& preUpd = PreUpdate::preUpdatePlayersData;
 
   preUpd.pBestTarget = pTargetPlayer;
   preUpd.pMyMissile = pMyMissile;

@@ -28,6 +28,7 @@ namespace Cfg {
 	bool alliesLines = false;
 	bool linesVehicles = true;
 	bool vehicleIndicator = true;
+    bool vehicleReticle = true;
 
 	namespace Radar {
 	  bool enable = false;

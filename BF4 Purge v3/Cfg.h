@@ -28,6 +28,7 @@ namespace Cfg {
 	extern bool use3DvehicleBox;
 	extern bool vehicleCenter;
 	extern bool vehicleIndicator;
+	extern bool vehicleReticle;
 
 	namespace Radar {
 	  extern bool enable;
