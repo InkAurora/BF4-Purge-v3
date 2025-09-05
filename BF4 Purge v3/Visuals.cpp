@@ -814,7 +814,13 @@ void Visuals::RenderVisuals() {
 	  }
 	}
 
-	if (tmpAimPoint3D == ZERO_VECTOR) continue;
+	if (tmpAimPoint3D == ZERO_VECTOR) {
+      BoundingBox3D playerBB3D;
+      GetEntityAABB(pSoldier, &playerBB3D);
+      tmpAimPoint3D = playerBB3D.GetCenter();
+
+      if (tmpAimPoint3D == ZERO_VECTOR) continue;
+	}
 
 	//if (!isInTeam) RenderPlayerNames(pPlayer); //TODO;
 
