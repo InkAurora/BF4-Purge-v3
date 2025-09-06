@@ -1,6 +1,7 @@
-- Fix ImGui's input capture
+- Fix ImGui's input capture ==
 - Add force locking aimbot ==
 - Add TOW force locking and soft guiding
+- Add kamikaze warning
 - Add headshot randomizer (auto bone selection)
 - Add all bones visibility check
 - Add a target selecting system that prioritizes enemies aiming at you

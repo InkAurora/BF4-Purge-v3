@@ -65,12 +65,23 @@ LRESULT __stdcall HooksManager::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 	ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
 	switch (uMsg) {
-	case WM_MOUSEMOVE: return false;
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+	case WM_MBUTTONDOWN:
+	case WM_MBUTTONUP:
+	case WM_MOUSEWHEEL:
+	case WM_MOUSEHWHEEL:
+      return 0; // Prevent mouse clicks being sent to the game
 	default:
 	  break;
 	}
-	return true;
+
+    return 1; // Prevent other inputs being sent to the game
   }
+
   return CallWindowProc(HooksManager::Get()->oWndproc, hWnd, uMsg, wParam, lParam);
 }
 
@@ -180,7 +191,24 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 
   ImGui::NewFrame();
 
+  ImGuiIO& io = ImGui::GetIO();
+
+  io.MouseDrawCursor = G::isMenuVisible;
+
   if (G::isMenuVisible) {
+
+	// Manually set mouse position (fixes -FLT_MAX invalidation)
+	POINT cursorPos;
+	GetCursorPos(&cursorPos);
+	ScreenToClient(window, &cursorPos);
+	io.MousePos = ImVec2(static_cast<float>(cursorPos.x), static_cast<float>(cursorPos.y));
+
+	// Manually set mouse button states (ensures clicks register even if WndProc misses them)
+	io.MouseDown[0] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;  // Left button
+	io.MouseDown[1] = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;  // Right button
+	io.MouseDown[2] = (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0;  // Middle button
+	// Add more for X1/X2 if needed: io.MouseDown[3/4] = GetAsyncKeyState(VK_XBUTTON1/2)
+
 	ImGui::Begin(xorstr_("BF4 Purge v3"), &G::isMenuVisible, ImGuiWindowFlags_AlwaysAutoResize);
 
 	if (ImGui::BeginTabBar(xorstr_("##tabs"), ImGuiTabBarFlags_None)) {
@@ -242,10 +270,6 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 
   if (Cfg::DBG::testString != "") Renderer::DrawString({ 100, 100 },
 	StringFlag::CENTER_Y, ImColor::Purple(), Cfg::DBG::testString.c_str());
-
-  ImGuiIO& io = ImGui::GetIO();
-
-  io.MouseDrawCursor = G::isMenuVisible;
 
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
