@@ -1,9 +1,13 @@
 - Fix ImGui's input capture ==
 - Add force locking aimbot ==
-- Add TOW force locking and soft guiding
+- Fix Accuracy Stats ==
+- Fix Aimbot == (I'll never know if it's really fixed)
+- Add deploy hack
+- Fix RPG aimbot
+- Add TOW force locking and soft guiding (maybe impossible, needs visual contact)
 - Add kamikaze warning
 - Add headshot randomizer (auto bone selection)
 - Add all bones visibility check
 - Add a target selecting system that prioritizes enemies aiming at you
-- Align 3D boxes to player camera
+- Align 3D boxes to player camera ==
 - Add rage mode for funz

@@ -54,75 +54,94 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
   if (angularDataIn && angularDataIn->valid)
 	Cfg::DBG::_internalUseCurve = D3DXVec3LengthSq(&angularDataIn->angularVelocity) != 0.0f;
 
-  if (bulletGravity != 0.0f) {
+  // Use epsilon to decide gravity branch to avoid numerical instability on tiny gravity
+  constexpr float kGravityEpsilon = 1e-4f;
+  const bool useGravity = std::fabs(bulletGravity) > kGravityEpsilon;
+
+  if (useGravity) {
 	Vector gravity = { 0, bulletGravity, 0 };
+	// Guard against tiny a1 leading to huge coefficients
 	double a1 = 0.25f * D3DXVec3LengthSq(&gravity);
-	double b1 = -1.0f * D3DXVec3Dot(&gravity, &effectiveVel);
-	double c1 = -1.0f * D3DXVec3Dot(&gravity, &relativePos) + D3DXVec3LengthSq(&effectiveVel) - (bulletVel * bulletVel);
-	double d1 = 2.0f * D3DXVec3Dot(&effectiveVel, &relativePos);
-	double e1 = D3DXVec3LengthSq(&relativePos);
+	if (a1 == 0.0) {
+	  // Fallback to no-gravity solution
+	} else {
+	  double b1 = -1.0f * D3DXVec3Dot(&gravity, &effectiveVel);
+	  double c1 = -1.0f * D3DXVec3Dot(&gravity, &relativePos) + D3DXVec3LengthSq(&effectiveVel) - (bulletVel * bulletVel);
+	  double d1 = 2.0f * D3DXVec3Dot(&effectiveVel, &relativePos);
+	  double e1 = D3DXVec3LengthSq(&relativePos);
 
-	auto roots = solve_quartic(b1 / a1, c1 / a1, d1 / a1, e1 / a1);
-	double t = 0.0f;
-	for (int i = 0; i < 4; ++i) {
-	  if (roots[i].real() > 0.0f && (roots[i].real() < t || t == 0.0f))
-		t = roots[i].real();
+	  auto roots = solve_quartic(b1 / a1, c1 / a1, d1 / a1, e1 / a1);
+	  double t = 0.0f;
+	  // Filter for smallest positive, finite root
+	  for (int i = 0; i < 4; ++i) {
+		const double r = roots[i].real();
+		if (r > 0.0 && std::isfinite(r) && (r < t || t == 0.0))
+		  t = r;
+	  }
+
+	  if (overrideTravelTime > 0.0f) t = overrideTravelTime;
+
+	  if (t <= 0.0f) return false;
+
+	  out->travelTime = t;
+
+	  Vector targetVel = dstVel;
+	  if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
+		PredictFinalRotation(
+		  dstVel, angularDataIn->angularVelocity, out->travelTime,
+		  angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
+		  &targetVel);
+
+	  Vector futurePos;
+	  scaledVel = targetVel * t;
+	  D3DXVec3Add(&futurePos, &dst, &scaledVel);
+	  Vector velAdjustment = srcVel * t;
+	  Vector drop = gravity * (0.5f * t * t);
+	  D3DXVec3Subtract(&out->hitPos, &futurePos, &velAdjustment);
+	  D3DXVec3Subtract(&out->hitPos, &out->hitPos, &drop);
+
+	  out->bulletDrop = bulletGravity;
+	  out->bulletVel = bulletVel;
+	  out->distance = Misc::Distance3D(src, out->hitPos);
+	  out->origin = dst;
+
+	  if (zeroying != 0.0f)
+		out->hitPos.y += std::sinf(zeroying) * out->distance;
+
+	  return true;
 	}
-
-	if (overrideTravelTime > 0.0f) t = overrideTravelTime;
-
-	if (t <= 0.0f) return false;
-
-	out->travelTime = t;
-
-	Vector targetVel = dstVel;
-	if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
-	  PredictFinalRotation(
-		dstVel, angularDataIn->angularVelocity, out->travelTime,
-		angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
-		&targetVel);
-
-	Vector futurePos;
-	scaledVel = targetVel * t;
-	D3DXVec3Add(&futurePos, &dst, &scaledVel);
-	Vector velAdjustment = srcVel * t;
-	Vector drop = gravity * (0.5f * t * t);
-	D3DXVec3Subtract(&out->hitPos, &futurePos, &velAdjustment);
-	D3DXVec3Subtract(&out->hitPos, &out->hitPos, &drop);
-
-	out->bulletDrop = bulletGravity;
-	out->bulletVel = bulletVel;
-	out->distance = Misc::Distance3D(src, out->hitPos);
-	out->origin = dst;
-
-	if (zeroying != 0.0f)
-	  out->hitPos.y += std::sinf(zeroying) * out->distance;
-
-	return true;
   }
 
+  // No-gravity (or gravity too small): solve quadratic/linear
   const double a = D3DXVec3LengthSq(&effectiveVel) - (bulletVel * bulletVel);
   const double b = 2.0 * D3DXVec3Dot(&relativePos, &effectiveVel);
   const double c = D3DXVec3LengthSq(&relativePos);
 
-  if (a == 0.0f) return false;
-  double disc = b * b - (4 * a * c);
-
-  double t = 0.f;
-  if (disc > 0.f) {
-	const auto t1 = (-b - sqrt(disc)) / (2 * a);
-	const auto t2 = (-b + sqrt(disc)) / (2 * a);
-	if (t1 > 0.f && t2 > 0.f) t = std::min<double>(t1, t2);
-	else if (t1 < 0.f && t2 > 0.f) t = t2;
-	else if (t1 > 0.f && t2 < 0.f) t = t1;
-	else t = 0.f;
+  double t = 0.0;
+  if (std::fabs(a) < 1e-8) {
+	// Linear case: a ~ 0 -> b * t + c = 0
+	if (std::fabs(b) < 1e-12) return false; // No solution
+	t = -c / b;
+  } else {
+	const double disc = b * b - (4 * a * c);
+	if (disc > 0.0) {
+	  const auto sqrtDisc = std::sqrt(disc);
+	  const auto t1 = (-b - sqrtDisc) / (2 * a);
+	  const auto t2 = (-b + sqrtDisc) / (2 * a);
+	  if (t1 > 0.0 && t2 > 0.0) t = std::min<double>(t1, t2);
+	  else if (t1 < 0.0 && t2 > 0.0) t = t2;
+	  else if (t1 > 0.0 && t2 < 0.0) t = t1;
+	  else t = 0.0;
+	} else if (disc == 0.0) {
+	  t = ((-b) / (2 * a));
+	} else {
+	  return false;
+	}
   }
-  else if (disc == 0.0f) t = ((-b) / (2 * a));
-  else return false;
 
   if (overrideTravelTime > 0.0f) t = overrideTravelTime;
 
-  if (t <= 0.0f) return false;
+  if (t <= 0.0f || !std::isfinite(t)) return false;
 
   out->travelTime = t;
 
@@ -297,7 +316,7 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 		if (d > 150) zeroAdjust = 0;
 		if (d > 250) zeroAdjust = 1;
 		if (d > 350) zeroAdjust = 2;
-		if (d > 450) zeroAdjust = 3;
+	 if (d > 450) zeroAdjust = 3;
 		if (d > 750) zeroAdjust = 4;
 
 		if (pWeaponComp->m_ZeroingDistanceLevel != zeroAdjust && (GetAsyncKeyState(VK_MENU) & 0x8000)) {

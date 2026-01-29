@@ -21,6 +21,7 @@ namespace G {
   D3DXVECTOR3	viewPos = { -1, -1, -1 };
   bool			targetLock = false;
   HINSTANCE		hInst = NULL;
+  bool            matchEnded = false;
 }
 
 namespace F {

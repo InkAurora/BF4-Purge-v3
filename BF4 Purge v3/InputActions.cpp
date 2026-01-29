@@ -1,5 +1,7 @@
 #include "InputActions.h"
 
+const double PI = 3.141592653589793238463L;
+
 void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const WeaponData_s& pVehData, const Vector& targetPos, VeniceClientMissileEntity* pMissile) {
   if (!Cfg::AimBot::enable) return;
 
@@ -206,7 +208,7 @@ void InputActions::VehicleTurretControll(const Vector2D& deltaVec, float delta, 
 	&& IsValidPtr(pMissile->m_pMissileEntityData)
 	&& pMissile->m_pMissileEntityData->IsTOW()) {
 	isInRange = true;
-    isTOW = true;
+	isTOW = true;
   }
 
   if (isInRange) {

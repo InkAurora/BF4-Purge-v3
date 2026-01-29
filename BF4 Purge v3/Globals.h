@@ -28,6 +28,7 @@ namespace G {
   extern D3DXVECTOR3 viewPos;
   extern bool targetLock;
   extern HINSTANCE hInst;
+  extern bool matchEnded;
 }
 
 class Visuals;
