@@ -155,7 +155,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   }
 
   if (GetAsyncKeyState(VK_INSERT) & 0x1) G::isMenuVisible = !G::isMenuVisible;
-  if (GetAsyncKeyState(VK_END) & 0x8000) G::shouldExit = true;
+  if (GetAsyncKeyState(VK_END) & 0x8000) SetEvent(G::g_exitEvent);
   if (GetAsyncKeyState(VK_CAPITAL)) {
 	Cfg::AimBot::targetLock = true;
   }

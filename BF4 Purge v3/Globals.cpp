@@ -9,12 +9,12 @@ namespace DX {
 }
 
 namespace G {
+  HANDLE        g_exitEvent = nullptr;
   int           FPS = 0;
   int           inputFPS = 0;
   int           framecount = 0;
   int           inputFramecount = 0;
   bool			isMenuVisible = false;
-  bool			shouldExit = false;
   ImVec2		screenSize = { -1, -1 };
   ImVec2		screenCenter = { -1, -1 };
   D3DXVECTOR2	viewPos2D = { -1, -1 };

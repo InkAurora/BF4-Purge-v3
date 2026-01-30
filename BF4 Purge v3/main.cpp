@@ -23,7 +23,14 @@ DWORD WINAPI Main(HMODULE hModule) {
   //Sleep(5000);
 
   if (!Interface::InitializeVisuals()) {
-    G::shouldExit = true;
+    return EjectThread();
+  }
+
+  G::g_exitEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
+
+  if (!G::g_exitEvent) {
+    Interface::ShutdownVisuals();
+    return EjectThread();
   }
 
   HooksManager::Get()->Install();
@@ -31,7 +38,7 @@ DWORD WINAPI Main(HMODULE hModule) {
   F::pVisuals = std::make_unique<Visuals>();
   F::pFeatures = std::make_unique<Features>();
 
-  while (!G::shouldExit) Sleep(300);
+  WaitForSingleObject(G::g_exitEvent, INFINITE);
 
   F::pFeatures->MinimapSpot(false);
   F::pFeatures->Recoil(false);
@@ -41,7 +48,10 @@ DWORD WINAPI Main(HMODULE hModule) {
 
   Interface::ShutdownVisuals();
 
-  Sleep(100);
+  CloseHandle(G::g_exitEvent);
+  G::g_exitEvent = nullptr;
+
+  Sleep(200);
 
   return EjectThread();
 }

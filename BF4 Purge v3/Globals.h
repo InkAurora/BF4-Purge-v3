@@ -16,12 +16,12 @@ namespace DX {
 }
 
 namespace G {
+  extern HANDLE g_exitEvent;
   extern int FPS;
   extern int inputFPS;
   extern int framecount;
   extern int inputFramecount;
   extern bool isMenuVisible;
-  extern bool shouldExit;
   extern ImVec2 screenSize;
   extern ImVec2 screenCenter;
   extern D3DXVECTOR2 viewPos2D;
