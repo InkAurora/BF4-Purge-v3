@@ -13,10 +13,16 @@ void HooksManager::Install() {
   oWndproc = reinterpret_cast<WNDPROC>(
     SetWindowLongPtr(oHWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc)));
 
-  while (!IsValidPtr(BorderInputNode::GetInstance())) Sleep(250);
+  auto inputNode = BorderInputNode::GetInstance();
+  while (!IsValidPtr(inputNode) || !IsValidPtr(inputNode->m_pInputNode)) {
+    Sleep(250);
+    inputNode = BorderInputNode::GetInstance();
+  }
 
   pPreFrameHook = std::make_unique<VMTHook>();
-  pPreFrameHook->Setup(BorderInputNode::GetInstance()->m_pInputNode);
+  if (!pPreFrameHook->Setup(inputNode->m_pInputNode)) {
+    return;
+  }
   pPreFrameHook->Hook(Index::PRE_FRAME_UPDATE, HooksManager::PreFrameUpdate);
 
   //pRayCasterHook = std::make_unique<VMTHook>();

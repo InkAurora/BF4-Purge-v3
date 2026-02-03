@@ -49,24 +49,15 @@ typedef D3DXQUATERNION Quaternion;
 #else
 #define _PTR_MAX_VALUE ((PVOID)0xFFF00000)
 #endif
-//__forceinline bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < _PTR_MAX_VALUE) && p != nullptr; }
 __forceinline bool IsValidPtr(PVOID p) {
-    // Quick range check first
-    if (!p || p < (PVOID)0x10000 || p >= _PTR_MAX_VALUE)
-        return false;
-    
-    // Optional: Add VirtualQuery for critical pointers
-    #ifdef STRICT_VALIDATION
-    MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQuery(p, &mbi, sizeof(mbi)) == 0)
-        return false;
-    return (mbi.State == MEM_COMMIT) && 
-           (mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE));
-    #endif
-    
-    return true;
+  __try {
+    volatile auto result = *(volatile char*)p;
+  }
+  __except (EXCEPTION_EXECUTE_HANDLER) {
+    return false;
+  }
+  return true;
 }
-
 
 #pragma region FORWARD_DECLARATIONS
 // Generated using ReClass 2014

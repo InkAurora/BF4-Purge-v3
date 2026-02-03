@@ -223,6 +223,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 		ImGui::Checkbox(xorstr_("3D Vehicles"), &Cfg::ESP::use3DvehicleBox);
 		ImGui::Checkbox(xorstr_("ESP Explosives"), &Cfg::ESP::explosives);
 		ImGui::Checkbox(xorstr_("JDAM Prediction"), &Cfg::ESP::predictionBombImpact);
+		ImGui::Checkbox(xorstr_("Angular Prediction"), &Cfg::ESP::predictionUseAngularVelocity);
         ImGui::EndTabItem();
 	  }
 

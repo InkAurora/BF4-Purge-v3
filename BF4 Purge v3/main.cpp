@@ -21,6 +21,7 @@ DWORD WINAPI EjectThread() {
 
 DWORD WINAPI Main(HMODULE hModule) {
   //Sleep(5000);
+  G::hInst = hModule;
 
   if (!Interface::InitializeVisuals()) {
     return EjectThread();
@@ -59,8 +60,11 @@ DWORD WINAPI Main(HMODULE hModule) {
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
   
   if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
-    G::hInst = hModule;
-    CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Main, hModule, NULL, NULL);
+    DisableThreadLibraryCalls(hModule);
+
+    HANDLE hThread = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Main, hModule, NULL, NULL);
+    
+    if (hThread) CloseHandle(hThread);
   }
 
   return TRUE;

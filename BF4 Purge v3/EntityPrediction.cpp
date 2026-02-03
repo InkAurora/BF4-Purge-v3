@@ -51,8 +51,10 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
   Vector effectiveVel; D3DXVec3Subtract(&effectiveVel, &dstVel, &srcVel);
   Vector scaledVel;
 
-  if (angularDataIn && angularDataIn->valid)
-	Cfg::DBG::_internalUseCurve = D3DXVec3LengthSq(&angularDataIn->angularVelocity) != 0.0f;
+  const bool useAngularPrediction =
+	Cfg::ESP::predictionUseAngularVelocity && angularDataIn && angularDataIn->valid &&
+	D3DXVec3LengthSq(&angularDataIn->angularVelocity) != 0.0f;
+  Cfg::DBG::_internalUseCurve = useAngularPrediction;
 
   // Use epsilon to decide gravity branch to avoid numerical instability on tiny gravity
   constexpr float kGravityEpsilon = 1e-4f;
@@ -86,7 +88,7 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
 	  out->travelTime = t;
 
 	  Vector targetVel = dstVel;
-	  if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
+	  if (useAngularPrediction && Cfg::ESP::_internalCurveIterationCount > 0)
 		PredictFinalRotation(
 		  dstVel, angularDataIn->angularVelocity, out->travelTime,
 		  angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
@@ -146,7 +148,7 @@ bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& d
   out->travelTime = t;
 
   Vector targetVel = dstVel;
-  if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
+  if (useAngularPrediction && Cfg::ESP::_internalCurveIterationCount > 0)
 	PredictFinalRotation(
 	  dstVel, angularDataIn->angularVelocity, out->travelTime,
 	  angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
@@ -188,14 +190,13 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
   if (auto pVehicle = pTarget->GetClientVehicleEntity(); IsValidPtr(pVehicle)) {
 	targetVelocity = pVehicle->m_VelocityVec;
 
-	if (IsValidPtr(pTarget->GetSoldierEntity()->m_pData) && pTarget->GetSoldierEntity()->m_pData->IsInJet()) {
-	  if (IsValidPtr(pVehicle->GetChassisComponent())) {
-		Matrix modelMatrix;
-		pVehicle->GetTransform(&modelMatrix);
-		D3DXQuaternionRotationMatrix(&angularData.orientation, &modelMatrix);
-		angularData.angularVelocity = pVehicle->GetChassisComponent()->m_AngularVelocity;
-		angularData.valid = true;
-	  }
+	if (Cfg::ESP::predictionUseAngularVelocity && IsValidPtr(pVehicle->m_pData)
+	  && pVehicle->m_pData->IsAirVehicle() && IsValidPtr(pVehicle->GetChassisComponent())) {
+	  Matrix modelMatrix;
+	  pVehicle->GetTransform(&modelMatrix);
+	  D3DXQuaternionRotationMatrix(&angularData.orientation, &modelMatrix);
+	  angularData.angularVelocity = pVehicle->GetChassisComponent()->m_AngularVelocity;
+	  angularData.valid = true;
 	}
   } else if (auto pTargetSoldier = pTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
 	targetVelocity = *pTargetSoldier->GetVelocity();
@@ -377,9 +378,16 @@ void Prediction::PredictFinalRotation(const Vector& linearVel, const Vector& ang
   float deltaTime = (predTime * Cfg::ESP::_internalCurvePredTimeMultiplier / 100.0f) / Cfg::ESP::_internalCurveIterationCount;
   for (int i = 0; i < Cfg::ESP::_internalCurveIterationCount; ++i) {
 	PredictLinearMove(predLinVel, deltaTime, predDisplacement, &predDisplacement);
-	PredictRotation(angularVel, predOrientation, deltaTime, &predOrientation);
+	const auto angularSpeed = D3DXVec3Length(&angularVel);
+	Quaternion rotationFromAngularVelocity = { 0.0f, 0.0f, 0.0f, 1.0f };
+	if (angularSpeed > 0.0f) {
+	  const auto rotationAngle = angularSpeed * deltaTime;
+	  Vector rotationAxis; D3DXVec3Normalize(&rotationAxis, &angularVel);
+	  D3DXQuaternionRotationAxis(&rotationFromAngularVelocity, &rotationAxis, rotationAngle);
+	}
 
-	predLinVel = QuaternionTranslation(predOrientation, Vector(0.0f, 0.0f, D3DXVec3Length(&predLinVel)));
+	predOrientation = predOrientation * rotationFromAngularVelocity;
+	predLinVel = QuaternionTranslation(rotationFromAngularVelocity, predLinVel);
 	Cfg::DBG::_internalPredictionCurve[i] = predDisplacement;
   }
   *predLinearVelOut = predLinVel;
