@@ -4,10 +4,12 @@
 - Align 3D boxes to player camera ==
 - Fix aimbot == (I'll never know if it's really fixed)
 - Fix angular velocity prediction ==
-- Add fast vehicles aimpoint prediction smoothing (prevent jittering on fast but small direction changes)
+- Add fast vehicles aimpoint prediction smoothing (prevent jittering on fast but small direction changes) == (Dumb idea, will never work)
+- Add allied vehicles respawn warning
+- Add dynamic angular velocity prediction based on target distance, speed, and launcher properties
 - Add config file auto-saving and loading
 - Add deploy hack
-- Fix RPG aimbot
+- Fix RPG aimbot == (maybe)
 - Add TOW force locking and soft guiding (maybe impossible, needs visual contact)
 - Add headshot randomizer (auto bone selection)
 - Add all bones visibility check

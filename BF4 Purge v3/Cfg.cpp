@@ -19,7 +19,7 @@ namespace Cfg {
 	bool predictionBombImpact = true;
 	bool predictionImpactData = true;
 	int predictionCrossRadius = 15;
-	bool predictionUseAngularVelocity = false;
+	bool predictionUseAngularVelocity = true;
 
 	int _internalCurveIterationCount = 16;
 	float _internalCurvePredTimeMultiplier = 69.0f;

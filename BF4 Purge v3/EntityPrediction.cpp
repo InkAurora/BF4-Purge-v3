@@ -244,7 +244,8 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 
 		//Calculate final velocity again for new target position 
 		bulletVelocity = ComputeMissileFinalVelocity(initSpd, maxSpd, accel, ignTime, dst);
-		bulletGravity = pMissileData->m_Gravity > 0.f ? 0.0f : pMissileData->m_Gravity;
+		if (pMissileData->IsTOW() || pMissileData->IsLockable())
+		  bulletGravity = pMissileData->m_Gravity > 0.f ? 0.0f : pMissileData->m_Gravity;
 	  }
 
 	  if (pLocal->InVehicle() && IsValidPtr(pWeaponData)) {
@@ -293,7 +294,14 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 
   //Zeroing fix
   float zeroEntry = 0.0f;
-  if (auto pWeaponComp = pLocalSoldier->m_pWeaponComponent; IsValidPtr(pWeaponComp) && !pLocal->InVehicle()) {
+  bool allowZeroing = true;
+  if (IsValidPtr(pFiring) && IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData)) {
+	allowZeroing = pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
+	  != ProjectileEntityData::AntHitReactionWeaponType_Explosion;
+  }
+
+  auto pWeaponComp = pLocalSoldier->m_pWeaponComponent;
+  if (allowZeroing && IsValidPtr(pWeaponComp) && !pLocal->InVehicle()) {
 	if (auto pWeapon = pWeaponComp->GetActiveSoldierWeapon(); IsValidPtr(pWeapon)) {
 	  if (auto pClientWeapon = pWeapon->m_pWeapon; IsValidPtr(pClientWeapon) && IsValidPtr(pClientWeapon->m_pWeaponModifier)) {
 		auto ZeroEntry = WeaponZeroingEntry(-1.0f, -1.0f);
