@@ -2,7 +2,9 @@
 #include "Globals.h"
 #include "EntityPrediction.h"
 #include "InputActions.h"
+#include "Logger.h"
 #include "MiscFeatures.h"
+#include "VehicleInput.h"
 #include <cmath>
 #include "xorstr.hpp"
 
@@ -15,6 +17,19 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   auto pGameWorld = (IsValidPtr(pLevel) ? pLevel->m_pGameWorld : nullptr);
   static Level* s_lastLevel = nullptr;
 
+#ifdef _DEBUG
+  static bool s_gameWorldReady = false;
+  const bool gameWorldReady = IsValidPtr(pGameWorld);
+  if (gameWorldReady != s_gameWorldReady) {
+    s_gameWorldReady = gameWorldReady;
+    if (gameWorldReady) {
+      LOG_INFO("preframe", "game world is available for level=%p", pLevel);
+    } else {
+      LOG_WARN("preframe", "game world became unavailable, ending the current match context");
+    }
+  }
+#endif
+
   if (!IsValidPtr(pGameWorld)) {
     if (s_lastLevel != nullptr) G::matchEnded = true;
     s_lastLevel = nullptr;
@@ -23,9 +38,18 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
 
   if (s_lastLevel && s_lastLevel != pLevel) {
     G::matchEnded = true;
+#ifdef _DEBUG
+    LOG_INFO("preframe", "level transition detected: %p -> %p", s_lastLevel, pLevel);
+#endif
   } else {
     G::matchEnded = false;
   }
+
+#ifdef _DEBUG
+  if (s_lastLevel == nullptr && pLevel != nullptr) {
+    LOG_INFO("preframe", "entered level=%p", pLevel);
+  }
+#endif
   s_lastLevel = pLevel;
 
   static int framecount = 0;
@@ -43,8 +67,35 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   }
 
   auto pDxRenderer = DxRenderer::GetInstance();
+
+#ifdef _DEBUG
+  static bool s_dxRendererReady = true;
+  const bool dxRendererReady = IsValidPtr(pDxRenderer);
+  if (dxRendererReady != s_dxRendererReady) {
+    s_dxRendererReady = dxRendererReady;
+    if (dxRendererReady) {
+      LOG_INFO("preframe", "DxRenderer recovered");
+    } else {
+      LOG_WARN("preframe", "DxRenderer is unavailable, skipping frame processing");
+    }
+  }
+#endif
   if (!IsValidPtr(pDxRenderer)) return result;
+
   auto pScreen = pDxRenderer->m_pScreen;
+
+#ifdef _DEBUG
+  static bool s_screenReady = true;
+  const bool screenReady = IsValidPtr(pScreen);
+  if (screenReady != s_screenReady) {
+    s_screenReady = screenReady;
+    if (screenReady) {
+      LOG_INFO("preframe", "screen information recovered");
+    } else {
+      LOG_WARN("preframe", "DxRenderer screen is unavailable");
+    }
+  }
+#endif
   if (!IsValidPtr(pScreen)) return result;
 
   G::screenSize = { float(pScreen->m_Width), float(pScreen->m_Height) };
@@ -52,11 +103,54 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   G::viewPos2D = G::screenCenter;
 
   auto pGameRenderer = GameRenderer::GetInstance();
+
+#ifdef _DEBUG
+  static bool s_renderViewReady = true;
+  const bool renderViewReady = IsValidPtr(pGameRenderer) && IsValidPtr(pGameRenderer->m_pRenderView);
+  if (renderViewReady != s_renderViewReady) {
+    s_renderViewReady = renderViewReady;
+    if (renderViewReady) {
+      LOG_INFO("preframe", "render view recovered");
+    } else {
+      LOG_WARN("preframe", "render view is unavailable, skipping aim calculations");
+    }
+  }
+#endif
   if (!IsValidPtr(pGameRenderer) || !IsValidPtr(pGameRenderer->m_pRenderView)) return result;
 
   auto pManager = PlayerManager::GetInstance();
+
+#ifdef _DEBUG
+  static bool s_playerManagerReady = true;
+  const bool playerManagerReady = IsValidPtr(pManager);
+  if (playerManagerReady != s_playerManagerReady) {
+    s_playerManagerReady = playerManagerReady;
+    if (playerManagerReady) {
+      LOG_INFO("preframe", "PlayerManager recovered");
+    } else {
+      LOG_WARN("preframe", "PlayerManager is unavailable");
+    }
+  }
+#endif
   if (!IsValidPtr(pManager)) return result;
+
   auto pLocal = pManager->GetLocalPlayer();
+
+#ifdef _DEBUG
+  static bool s_localPlayerReady = false;
+  const bool localPlayerReady =
+    IsValidPtr(pLocal) &&
+    IsValidPtr(pLocal->GetSoldierEntity()) &&
+    pLocal->GetSoldierEntity()->IsAlive();
+  if (localPlayerReady != s_localPlayerReady) {
+    s_localPlayerReady = localPlayerReady;
+    if (localPlayerReady) {
+      LOG_INFO("preframe", "local player is ready and alive");
+    } else {
+      LOG_WARN("preframe", "local player or soldier entity is unavailable or dead");
+    }
+  }
+#endif
   if (!IsValidPtr(pLocal) || !IsValidPtr(pLocal->GetSoldierEntity()) || !pLocal->GetSoldierEntity()->IsAlive())
     return result;
   
@@ -72,6 +166,7 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
     if (PreUpdate::debugAimpointOverrideEnabled) {
       PreUpdate::debugAimpointOverrideEnabled = false;
       PreUpdate::debugAimpointOverridePos = ZERO_VECTOR;
+      LOG_INFO("preframe", "debug aimpoint override disabled");
     } else {
       auto pRayCaster = Main::GetInstance()->GetRayCaster();
       if (IsValidPtr(pRayCaster)) {
@@ -92,7 +187,18 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
           if (std::isfinite(distance) && distance > 1.0f && distance < 10000.0f) {
             PreUpdate::debugAimpointOverrideEnabled = true;
             PreUpdate::debugAimpointOverridePos = hit.m_position;
+            LOG_INFO(
+              "preframe",
+              "debug aimpoint override enabled at (%.2f, %.2f, %.2f)",
+              hit.m_position.x,
+              hit.m_position.y,
+              hit.m_position.z);
           }
+          else {
+            LOG_WARN("preframe", "debug aimpoint override ignored because the hit distance was invalid");
+          }
+        } else {
+          LOG_WARN("preframe", "debug aimpoint override requested but no controllable was hit");
         }
       }
     }
@@ -141,8 +247,29 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   PreUpdate::isPredicted = Prediction::GetPredictedAimPoint(
     pLocal, d.pBestTarget, aimPoint, &PreUpdate::predictionData, d.pMyMissile, &PreUpdate::weaponData, overrideTargetVelocity);
 
+#ifdef _DEBUG
+  static bool s_predictionStateInitialized = false;
+  static bool s_lastPredictionState = false;
+  if (!s_predictionStateInitialized || s_lastPredictionState != PreUpdate::isPredicted) {
+    s_predictionStateInitialized = true;
+    s_lastPredictionState = PreUpdate::isPredicted;
+    if (PreUpdate::isPredicted) {
+      LOG_INFO("preframe", "prediction solved successfully");
+    } else {
+      LOG_WARN("preframe", "prediction did not produce a valid intercept");
+    }
+  }
+#endif
+
   InputActions::Get()->HandleInput(
     PreUpdate::predictionData.hitPos, pLocal, PreUpdate::weaponData, aimPoint, d.pMyMissile);
+
+  if (pLocal->InVehicle()) {
+    ApplyPendingVehicleInputNodeOverlay(pThis);
+    LogVehicleInputNodeDiagnostics(pThis, static_cast<int>(pLocal->m_EntryId));
+  } else {
+    GetVehicleInputBackend().ResetTurretLook();
+  }
 
   F::pFeatures->MinimapSpot(Cfg::Misc::minimapSpot);
   F::pFeatures->Recoil(Cfg::Misc::disableRecoil);

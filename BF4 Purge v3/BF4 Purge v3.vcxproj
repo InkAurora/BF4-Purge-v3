@@ -110,7 +110,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>4005; 4099; 4244; 4267; 4302; 4305; 4311;</DisableSpecificWarnings>
@@ -129,7 +129,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>4005; 4099; 4244; 4267; 4302; 4305; 4311;</DisableSpecificWarnings>
@@ -159,6 +159,7 @@
     <ClCompile Include="Globals.cpp" />
     <ClCompile Include="InputActions.cpp" />
     <ClCompile Include="Interface.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Misc.cpp" />
     <ClCompile Include="MiscFeatures.cpp" />
@@ -189,6 +190,7 @@
     <ClInclude Include="includes.h" />
     <ClInclude Include="InputActions.h" />
     <ClInclude Include="Interface.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="Misc.h" />
     <ClInclude Include="MiscFeatures.h" />
     <ClInclude Include="quartic.h" />

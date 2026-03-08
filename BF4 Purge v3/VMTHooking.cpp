@@ -1,5 +1,7 @@
 #include "VMTHooking.h"
 #include "Engine.h"
+#include "Logger.h"
+#include "VehicleInput.h"
 #include "xorstr.hpp"
 #include <Windows.h>
 
@@ -9,21 +11,45 @@ HooksManager* HooksManager::Get() {
 }
 
 void HooksManager::Install() {
+  LOG_INFO("hooks", "starting hook installation");
   oHWnd = FindWindowA(xorstr_("Battlefield 4"), NULL);
+  if (!oHWnd) {
+    LOG_WARN("hooks", "FindWindowA could not locate the Battlefield 4 window");
+  } else {
+    LOG_INFO("hooks", "game window located: %p", oHWnd);
+  }
+
+  SetLastError(0);
   oWndproc = reinterpret_cast<WNDPROC>(
     SetWindowLongPtr(oHWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc)));
+  if (oWndproc == NULL && GetLastError() != 0) {
+    LOG_WARN("hooks", "SetWindowLongPtr failed while installing WndProc hook");
+  }
 
   auto inputNode = BorderInputNode::GetInstance();
+  bool waitedForInputNode = false;
   while (!IsValidPtr(inputNode) || !IsValidPtr(inputNode->m_pInputNode)) {
+    if (!waitedForInputNode) {
+      LOG_INFO("hooks", "waiting for BorderInputNode to become available");
+      waitedForInputNode = true;
+    }
     Sleep(250);
     inputNode = BorderInputNode::GetInstance();
+  }
+  if (waitedForInputNode) {
+    LOG_INFO("hooks", "BorderInputNode is ready: %p", inputNode->m_pInputNode);
   }
 
   pPreFrameHook = std::make_unique<VMTHook>();
   if (!pPreFrameHook->Setup(inputNode->m_pInputNode)) {
+    LOG_ERROR("hooks", "VMTHook::Setup failed for PreFrameUpdate");
     return;
   }
+
   pPreFrameHook->Hook(Index::PRE_FRAME_UPDATE, HooksManager::PreFrameUpdate);
+  LOG_INFO("hooks", "PreFrameUpdate hook installed");
+
+  InitializeVehicleInputHooks();
 
   //pRayCasterHook = std::make_unique<VMTHook>();
   //pRayCasterHook->Setup(Main::GetInstance()->GetRayCaster());
@@ -31,10 +57,19 @@ void HooksManager::Install() {
 }
 
 void HooksManager::Uninstall() {
-  pPreFrameHook->Release();
+  LOG_INFO("hooks", "starting hook removal");
+  if (pPreFrameHook) {
+    if (!pPreFrameHook->Release()) {
+      LOG_WARN("hooks", "PreFrameUpdate hook release reported no active hook");
+    }
+  }
+  ShutdownVehicleInputHooks();
   //pRayCasterHook->Release();
 
-  SetWindowLongPtr(oHWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(oWndproc));
+  if (oHWnd && oWndproc) {
+    SetWindowLongPtr(oHWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(oWndproc));
+  }
+  LOG_INFO("hooks", "hook removal completed");
 }
 
 void VMTHook::Hook(Index index, void* fnPointer) {

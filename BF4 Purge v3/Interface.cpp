@@ -1,29 +1,143 @@
 #include "Interface.h"
 #include "Cfg.h"
+#include "Logger.h"
 #include "xorstr.hpp"
 #include "VehicleInput.h"
 #include "VMTHooking.h"
+
+namespace {
+constexpr const char* kDummyWindowClassName = "BF4PurgeV3DummyWindow";
+
+const char* GetFeatureLevelName(D3D_FEATURE_LEVEL level) {
+	switch (level) {
+	case D3D_FEATURE_LEVEL_11_0:
+		return "11_0";
+	case D3D_FEATURE_LEVEL_10_1:
+		return "10_1";
+	case D3D_FEATURE_LEVEL_10_0:
+		return "10_0";
+	default:
+		return "unknown";
+	}
+}
+
+void LogWindowDiagnostics(const char* category, HWND hwnd, const char* label) {
+	char className[128] = {};
+	char windowTitle[256] = {};
+
+	if (hwnd != nullptr) {
+		GetClassNameA(hwnd, className, static_cast<int>(sizeof(className)));
+		GetWindowTextA(hwnd, windowTitle, static_cast<int>(sizeof(windowTitle)));
+	}
+
+	LOG_INFO(
+		category,
+		"%s hwnd=%p valid=%d visible=%d class='%s' title='%s'",
+		label,
+		hwnd,
+		hwnd != nullptr && IsWindow(hwnd),
+		hwnd != nullptr && IsWindowVisible(hwnd),
+		className[0] != '\0' ? className : "<none>",
+		windowTitle[0] != '\0' ? windowTitle : "<none>");
+}
+
+bool CreateDummyWindow(HWND& dummyWindow, bool& classRegisteredThisCall) {
+	classRegisteredThisCall = false;
+	dummyWindow = nullptr;
+
+	WNDCLASSEXA windowClass = {};
+	windowClass.cbSize = sizeof(windowClass);
+	windowClass.lpfnWndProc = DefWindowProcA;
+	windowClass.hInstance = G::hInst ? G::hInst : GetModuleHandleA(nullptr);
+	windowClass.lpszClassName = kDummyWindowClassName;
+
+	SetLastError(0);
+	const ATOM classAtom = RegisterClassExA(&windowClass);
+	if (classAtom == 0) {
+		const DWORD lastError = GetLastError();
+		if (lastError != ERROR_CLASS_ALREADY_EXISTS) {
+			LOG_ERROR("visuals", "RegisterClassExA failed for dummy window, lastError=%lu", lastError);
+			return false;
+		}
+	} else {
+		classRegisteredThisCall = true;
+	}
+
+	dummyWindow = CreateWindowExA(
+		0,
+		kDummyWindowClassName,
+		"BF4 Purge v3 Dummy Window",
+		WS_OVERLAPPEDWINDOW,
+		0,
+		0,
+		100,
+		100,
+		nullptr,
+		nullptr,
+		windowClass.hInstance,
+		nullptr);
+
+	if (dummyWindow == nullptr) {
+		LOG_ERROR("visuals", "CreateWindowExA failed for dummy window, lastError=%lu", GetLastError());
+		if (classRegisteredThisCall) {
+			UnregisterClassA(kDummyWindowClassName, windowClass.hInstance);
+			classRegisteredThisCall = false;
+		}
+		return false;
+	}
+
+	LogWindowDiagnostics("visuals", dummyWindow, "created dummy output window");
+	return true;
+}
+
+void DestroyDummyWindow(HWND dummyWindow, bool classRegisteredThisCall) {
+	HINSTANCE instance = G::hInst ? G::hInst : GetModuleHandleA(nullptr);
+	if (dummyWindow != nullptr) {
+		DestroyWindow(dummyWindow);
+	}
+	if (classRegisteredThisCall) {
+		UnregisterClassA(kDummyWindowClassName, instance);
+	}
+}
+}
 
 typedef long(__stdcall* present)(IDXGISwapChain*, UINT, UINT);
 present p_present;
 present p_present_target;
 
 bool get_present_pointer() {
+	HWND dummyWindow = nullptr;
+	bool classRegisteredThisCall = false;
+	if (!CreateDummyWindow(dummyWindow, classRegisteredThisCall)) {
+		return false;
+	}
+
   DXGI_SWAP_CHAIN_DESC sd;
   ZeroMemory(&sd, sizeof(sd));
   sd.BufferCount = 2;
   sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
   sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-  sd.OutputWindow = GetForegroundWindow();
+	sd.OutputWindow = dummyWindow;
   sd.SampleDesc.Count = 1;
   sd.Windowed = TRUE;
   sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-  IDXGISwapChain* swap_chain;
-  ID3D11Device* device;
+  LogWindowDiagnostics("visuals", sd.OutputWindow, "get_present_pointer selected output window");
+  LOG_INFO(
+    "visuals",
+    "creating dummy swap chain: buffers=%u format=%u windowed=%d swapEffect=%u sampleCount=%u",
+    sd.BufferCount,
+    static_cast<unsigned>(sd.BufferDesc.Format),
+    sd.Windowed,
+    static_cast<unsigned>(sd.SwapEffect),
+    sd.SampleDesc.Count);
+
+  IDXGISwapChain* swap_chain = nullptr;
+  ID3D11Device* device = nullptr;
+  D3D_FEATURE_LEVEL createdFeatureLevel = static_cast<D3D_FEATURE_LEVEL>(0);
 
   const D3D_FEATURE_LEVEL feature_levels[] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-  if (D3D11CreateDeviceAndSwapChain(
+  const HRESULT hr = D3D11CreateDeviceAndSwapChain(
 	NULL,
 	D3D_DRIVER_TYPE_HARDWARE,
 	NULL,
@@ -34,17 +148,51 @@ bool get_present_pointer() {
 	&sd,
 	&swap_chain,
 	&device,
-	nullptr,
-	nullptr) == S_OK) {
+	&createdFeatureLevel,
+	nullptr);
+
+  LOG_INFO(
+	"visuals",
+	"D3D11CreateDeviceAndSwapChain returned hr=0x%08lX swapChain=%p device=%p featureLevel=%s",
+	static_cast<unsigned long>(hr),
+	swap_chain,
+	device,
+	GetFeatureLevelName(createdFeatureLevel));
+
+  if (FAILED(hr)) {
+    if (sd.OutputWindow == nullptr) {
+      LOG_WARN("visuals", "dummy swap-chain creation failed with a null output window");
+    }
+    DestroyDummyWindow(dummyWindow, classRegisteredThisCall);
+	return false;
+  }
+
+	if (swap_chain == nullptr || device == nullptr) {
+	  LOG_ERROR("visuals", "dummy swap-chain creation succeeded but returned null COM pointers");
+	  if (swap_chain) swap_chain->Release();
+	  if (device) device->Release();
+	  DestroyDummyWindow(dummyWindow, classRegisteredThisCall);
+	  return false;
+	}
+
 	void** p_vtable = *reinterpret_cast<void***>(swap_chain);
+	if (p_vtable == nullptr || p_vtable[8] == nullptr) {
+	  LOG_ERROR("visuals", "dummy swap-chain vtable did not expose a present pointer");
+	  swap_chain->Release();
+	  device->Release();
+	  DestroyDummyWindow(dummyWindow, classRegisteredThisCall);
+	  return false;
+	}
+
+	p_present_target = (present)p_vtable[8];
+	LOG_INFO("visuals", "resolved present pointer at %p", p_present_target);
+
 	swap_chain->Release();
 	device->Release();
+	DestroyDummyWindow(dummyWindow, classRegisteredThisCall);
 	//context->Release();
-	p_present_target = (present)p_vtable[8];
 	return true;
   }
-  return false;
-}
 
 WNDPROC oWndProc;
 // Win32 message handler your application need to call.
@@ -112,8 +260,8 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  ImGui::CreateContext();
 	  ImGuiIO& io = ImGui::GetIO();
 
-	  TCHAR windir[MAX_PATH];
-	  GetWindowsDirectory(windir, MAX_PATH);
+	  char windir[MAX_PATH] = {};
+	  GetWindowsDirectoryA(windir, MAX_PATH);
 
 	  std::string fontDir = std::string(windir);
 	  fontDir += xorstr_("\\Fonts\\");
@@ -137,9 +285,16 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 	  ImGui_ImplWin32_Init(window);
 	  ImGui_ImplDX11_Init(p_device, p_context);
 	  init = true;
+	  LOG_INFO("visuals", "present detour initialized, window=%p device=%p context=%p", window, p_device, p_context);
 	}
-	else
+	else {
+	  static bool s_presentDeviceFailureLogged = false;
+	  if (!s_presentDeviceFailureLogged) {
+		LOG_WARN("visuals", "IDXGISwapChain::GetDevice failed during present detour initialization");
+		s_presentDeviceFailureLogged = true;
+	  }
 	  return p_present(p_swap_chain, sync_interval, flags);
+	}
   }
 
   G::framecount++;
@@ -170,12 +325,18 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
   if (!IsValidPtr(pLocal)) { //nullptr when loading to the server
 	if (!reHook) {
 	  reHook = true;
+	  LOG_WARN("visuals", "local player unavailable, releasing pre-frame hook until the level finishes loading");
 	  HooksManager::Get()->pPreFrameHook->Release();
 	}
   } else if (reHook) { //fully loaded
 	reHook = false;
-	HooksManager::Get()->pPreFrameHook->Setup(BorderInputNode::GetInstance()->m_pInputNode);
-	HooksManager::Get()->pPreFrameHook->Hook(Index::PRE_FRAME_UPDATE, HooksManager::PreFrameUpdate);
+	LOG_INFO("visuals", "local player restored, reinstalling pre-frame hook");
+	if (HooksManager::Get()->pPreFrameHook->Setup(BorderInputNode::GetInstance()->m_pInputNode)) {
+	  HooksManager::Get()->pPreFrameHook->Hook(Index::PRE_FRAME_UPDATE, HooksManager::PreFrameUpdate);
+	  LOG_INFO("visuals", "pre-frame hook reinstalled after load transition");
+	} else {
+	  LOG_ERROR("visuals", "failed to reinstall pre-frame hook after load transition");
+	}
   }
 
   static auto pSSmoduleClass = (uintptr_t*)OFFSET_SSMODULE;
@@ -238,6 +399,7 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 		  GetVehicleTurretInputModeName(VehicleTurretInputMode::CrosshairConcepts),
 		  GetVehicleTurretInputModeName(VehicleTurretInputMode::CameraConcepts),
 		  GetVehicleTurretInputModeName(VehicleTurretInputMode::RightStickConcepts),
+		  GetVehicleTurretInputModeName(VehicleTurretInputMode::ActionMapCrosshair),
 		};
 		ImGui::Combo(xorstr_("Vehicle Turret Input"), &Cfg::AimBot::vehicleTurretInputMode, turretInputModes, IM_ARRAYSIZE(turretInputModes));
 		static int selected = UpdatePoseResultData::BONES::Neck;
@@ -309,31 +471,42 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 }
 
 bool Interface::InitializeVisuals() {
+	LOG_INFO("visuals", "InitializeVisuals started");
   Sleep(50);
   if (!get_present_pointer()) {
+	LOG_ERROR("visuals", "failed to resolve present pointer");
 	return false;
   }
 
+	LOG_INFO("visuals", "present pointer resolved: %p", p_present_target);
+
   if (MH_Initialize() != MH_OK) {
+	LOG_ERROR("visuals", "MH_Initialize failed");
 	return false;
   }
 
   if (MH_CreateHook(reinterpret_cast<void**>(p_present_target), &detour_present, reinterpret_cast<void**>(&p_present)) != MH_OK) {
+	LOG_ERROR("visuals", "MH_CreateHook failed for IDXGISwapChain::Present");
 	return false;
   }
 
   if (MH_EnableHook(p_present_target) != MH_OK) {
+	LOG_ERROR("visuals", "MH_EnableHook failed for IDXGISwapChain::Present");
 	return false;
   }
+
+	LOG_INFO("visuals", "InitializeVisuals completed successfully");
 
   return true;
 }
 
 bool Interface::ShutdownVisuals() {
   if (MH_DisableHook(MH_ALL_HOOKS) != MH_OK) {
+	LOG_ERROR("visuals", "MH_DisableHook failed during shutdown");
 	return false;
   }
   if (MH_Uninitialize() != MH_OK) {
+	LOG_ERROR("visuals", "MH_Uninitialize failed during shutdown");
 	return false;
   }
 
@@ -345,6 +518,8 @@ bool Interface::ShutdownVisuals() {
   if (p_context) { p_context->Release(); p_context = NULL; }
   if (p_device) { p_device->Release(); p_device = NULL; }
   //SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)(oWndProc)); // unhook
+
+	LOG_INFO("visuals", "ShutdownVisuals completed");
 
   return true;
 }

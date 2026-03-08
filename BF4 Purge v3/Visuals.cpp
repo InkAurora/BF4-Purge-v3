@@ -675,6 +675,10 @@ void Visuals::RenderVisuals() {
 	}
   }
 
+	const bool hasDebugTarget =
+		PreUpdate::debugAimpointOverrideEnabled &&
+		PreUpdate::debugAimpointOverridePos != ZERO_VECTOR;
+
   Vector aimPoint3D = ZERO_VECTOR;
   float longestDelta = FLT_MAX;
   static int targetID = -1;
@@ -890,22 +894,34 @@ void Visuals::RenderVisuals() {
 	Renderer::DrawLine(G::screenCenter, vPos2D, ImColor(230, 30, 30, 130));
   }
 
-  RenderBombImpact(aimPoint3D, &PreUpdate::weaponData);
+  auto& preUpd = PreUpdate::preUpdatePlayersData;
 
   if (targetID != -1) pTargetPlayer = pPlayerMgr->GetPlayerById(targetID);
+
+  preUpd.pMyMissile = pMyMissile;
+
+  if (hasDebugTarget) {
+	RenderBombImpact(PreUpdate::debugAimpointOverridePos, &PreUpdate::weaponData);
+	preUpd.pBestTarget = nullptr;
+
+	if (PreUpdate::predictionData.hitPos == ZERO_VECTOR || !PreUpdate::isPredicted) return;
+
+	RenderAimPoint(PreUpdate::predictionData, nullptr);
+	return;
+	}
+
+  RenderBombImpact(aimPoint3D, &PreUpdate::weaponData);
 
   if (!IsValidPtr(pTargetPlayer)
 	|| !IsValidPtr(pLocal)
 	|| !IsValidPtr(pTargetPlayer->GetSoldierEntity())
 	|| !pTargetPlayer->GetSoldierEntity()->IsAlive()) {
 	pTargetPlayer = nullptr;
+	preUpd.pBestTarget = nullptr;
 	return;
-  }
-
-  auto& preUpd = PreUpdate::preUpdatePlayersData;
+	}
 
   preUpd.pBestTarget = pTargetPlayer;
-  preUpd.pMyMissile = pMyMissile;
 
   if (PreUpdate::predictionData.hitPos == ZERO_VECTOR || !PreUpdate::isPredicted) return;
 

@@ -61,6 +61,9 @@
     <ClCompile Include="Interface.cpp">
       <Filter>Menu</Filter>
     </ClCompile>
+    <ClCompile Include="Logger.cpp">
+      <Filter>Internal</Filter>
+    </ClCompile>
     <ClCompile Include="Engine.cpp">
       <Filter>SDK</Filter>
     </ClCompile>
@@ -149,6 +152,9 @@
     </ClInclude>
     <ClInclude Include="Interface.h">
       <Filter>Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>Internal</Filter>
     </ClInclude>
     <ClInclude Include="Visuals.h">
       <Filter>Features</Filter>

@@ -7,9 +7,14 @@ enum class VehicleTurretInputMode {
   CrosshairConcepts = 1,
   CameraConcepts = 2,
   RightStickConcepts = 3,
+  ActionMapCrosshair = 4,
 };
 
 const char* GetVehicleTurretInputModeName(VehicleTurretInputMode mode);
+bool InitializeVehicleInputHooks();
+void ShutdownVehicleInputHooks();
+void ApplyPendingVehicleInputNodeOverlay(void* inputNodeState);
+void LogVehicleInputNodeDiagnostics(void* inputNodeState, int seatId);
 
 struct VehicleAxesInput {
   bool writeYaw = false;
@@ -38,8 +43,10 @@ public:
 private:
   bool ApplyTurretLookMouse(const Vector2D& deltaVec, float smooth);
   bool ApplyTurretLookConcepts(const Vector2D& deltaVec, float smooth, VehicleTurretInputMode mode);
+  bool ApplyTurretLookActionMap(const Vector2D& deltaVec, float smooth, VehicleTurretInputMode mode);
   bool ResetTurretLookMouse();
   bool ResetTurretLookConcepts();
+  bool ResetTurretLookActionMap();
 };
 
 IVehicleInputBackend& GetVehicleInputBackend();

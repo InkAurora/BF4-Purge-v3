@@ -1,14 +1,88 @@
 #include "InputActions.h"
 #include "EntityPrediction.h"
+#include "Logger.h"
 #include "VehicleInput.h"
+
+namespace {
+enum class InputRoute {
+	None,
+	Soldier,
+	Vehicle,
+	TowMissile,
+};
+
+const char* GetInputRouteName(InputRoute route) {
+	switch (route) {
+	case InputRoute::Soldier:
+		return "soldier";
+	case InputRoute::Vehicle:
+		return "vehicle";
+	case InputRoute::TowMissile:
+		return "tow-missile";
+	case InputRoute::None:
+	default:
+		return "idle";
+	}
+}
+
+#ifdef _DEBUG
+struct InputDebugState {
+	bool inputContextReady = false;
+	bool inputCacheMissing = false;
+	InputRoute lastRoute = InputRoute::None;
+	int lastSeat = -1;
+	bool towLocked = false;
+};
+
+InputDebugState g_inputDebugState;
+
+void LogRouteChange(InputRoute route, int seatId) {
+	if (route == g_inputDebugState.lastRoute) return;
+
+	g_inputDebugState.lastRoute = route;
+	if (route == InputRoute::Vehicle) {
+		LOG_INFO("input", "input routing switched to %s control, seat=%d", GetInputRouteName(route), seatId);
+	} else {
+		LOG_INFO("input", "input routing switched to %s control", GetInputRouteName(route));
+	}
+}
+#endif
+}
 
 void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const WeaponData_s& pVehData, const Vector& targetPos, VeniceClientMissileEntity* pMissile) {
   if (!Cfg::AimBot::enable) return;
 
   BorderInputNode* pNode = BorderInputNode::GetInstance();
-  if (!IsValidPtr(pNode) || !IsValidPtr(pLocal)) return;
 
-  if (!IsValidPtr(pNode->m_inputCache)) return;
+#ifdef _DEBUG
+	const bool inputContextReady = IsValidPtr(pNode) && IsValidPtr(pLocal);
+	if (inputContextReady != g_inputDebugState.inputContextReady) {
+		g_inputDebugState.inputContextReady = inputContextReady;
+		if (inputContextReady) {
+			LOG_INFO("input", "input context recovered");
+		} else {
+			LOG_WARN("input", "BorderInputNode or local player is unavailable");
+		}
+	}
+#endif
+	if (!IsValidPtr(pNode) || !IsValidPtr(pLocal)) return;
+
+	if (!IsValidPtr(pNode->m_inputCache)) {
+#ifdef _DEBUG
+		if (!g_inputDebugState.inputCacheMissing) {
+			LOG_WARN("input", "input cache is unavailable");
+			g_inputDebugState.inputCacheMissing = true;
+		}
+#endif
+		return;
+	}
+
+#ifdef _DEBUG
+	if (g_inputDebugState.inputCacheMissing) {
+		LOG_INFO("input", "input cache recovered");
+		g_inputDebugState.inputCacheMissing = false;
+	}
+#endif
 
   auto& input = pNode->m_inputCache->flInputBuffer;
 
@@ -24,13 +98,34 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
 
   if (IsValidPtr(pMissile) && IsValidPtr(pMissile->m_pMissileEntityData) && pMissile->m_pMissileEntityData->IsTOW()) {
 	PreUpdate::isTOWLocked = true;
+	#ifdef _DEBUG
+		if (!g_inputDebugState.towLocked) {
+			LOG_INFO("input", "TOW missile lock acquired");
+			g_inputDebugState.towLocked = true;
+		}
+		LogRouteChange(InputRoute::TowMissile, -1);
+	#endif
 	TOWMissileControl(pLocal, pVeh, targetPos, pMissile);
 	return;
   }
 
+
+#ifdef _DEBUG
+	if (g_inputDebugState.towLocked) {
+		LOG_INFO("input", "TOW missile lock released");
+		g_inputDebugState.towLocked = false;
+	}
+#endif
   PreUpdate::isTOWLocked = false;
 
   if (IsValidPtr(pVeh) && IsValidPtr(pVeh->m_pData) && (int)pLocal->m_EntryId < 4) {
+	#ifdef _DEBUG
+	LogRouteChange(InputRoute::Vehicle, static_cast<int>(pLocal->m_EntryId));
+	if (g_inputDebugState.lastSeat != static_cast<int>(pLocal->m_EntryId)) {
+	  g_inputDebugState.lastSeat = static_cast<int>(pLocal->m_EntryId);
+	  LOG_INFO("input", "vehicle seat changed to %d", g_inputDebugState.lastSeat);
+	}
+	#endif
 	if (Cfg::Misc::noOverheat) OverheatControll();
 
 	if (pVeh->m_pData->IsAirVehicle()) {
@@ -49,7 +144,17 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
 	TVMissileControll(pVeh, pos, deltaVec, delta, input);
   }
   else if (!pLocal->InVehicle()) {
+	#ifdef _DEBUG
+	LogRouteChange(InputRoute::Soldier, -1);
+	g_inputDebugState.lastSeat = -1;
+	#endif
 	SoldierWeaponControll(delta, pos);
+  }
+  else {
+	#ifdef _DEBUG
+	LogRouteChange(InputRoute::None, -1);
+	g_inputDebugState.lastSeat = -1;
+	#endif
   }
 }
 
@@ -296,17 +401,31 @@ void InputActions::TOWMissileControl(ClientPlayer* pLocal, ClientVehicleEntity* 
 }
 
 void InputActions::VehicleTurretControll(const Vector2D& deltaVec, float delta, VeniceClientMissileEntity* pMissile) {
-  if (!(GetAsyncKeyState(VK_MENU) & 0x8000) || this->isAutoPiloting) return;
+  static bool wasAiming = false;
+
+  if (!(GetAsyncKeyState(VK_MENU) & 0x8000) || this->isAutoPiloting) {
+	if (wasAiming) {
+	  wasAiming = false;
+	  GetVehicleInputBackend().ResetTurretLook();
+	}
+	return;
+	}
 
   //Simulating mouse movement. I was trying to reverse IVehicle interface without success. Maybe you can make it ?
 
-  static bool wasAiming = false;
-  bool isInRange = delta <= Cfg::AimBot::radius;
+	const bool hasDebugTarget =
+		PreUpdate::debugAimpointOverrideEnabled &&
+		PreUpdate::debugAimpointOverridePos != ZERO_VECTOR;
+	const bool isInRange = hasDebugTarget || delta <= Cfg::AimBot::radius;
   bool isTOW = false;
 
   if (IsValidPtr(pMissile)
 	&& IsValidPtr(pMissile->m_pMissileEntityData)
 	&& pMissile->m_pMissileEntityData->IsTOW()) {
+	if (wasAiming) {
+	  wasAiming = false;
+	  GetVehicleInputBackend().ResetTurretLook();
+	}
 	return;
   }
 
