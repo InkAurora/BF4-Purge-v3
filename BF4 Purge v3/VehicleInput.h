@@ -2,6 +2,15 @@
 
 #include "Engine.h"
 
+enum class VehicleTurretInputMode {
+  MouseDevice = 0,
+  CrosshairConcepts = 1,
+  CameraConcepts = 2,
+  RightStickConcepts = 3,
+};
+
+const char* GetVehicleTurretInputModeName(VehicleTurretInputMode mode);
+
 struct VehicleAxesInput {
   bool writeYaw = false;
   bool writePitch = false;
@@ -25,6 +34,12 @@ public:
   bool ApplyAxes(const VehicleAxesInput& axes) override;
   bool ApplyTurretLook(const Vector2D& deltaVec, float smooth) override;
   bool ResetTurretLook() override;
+
+private:
+  bool ApplyTurretLookMouse(const Vector2D& deltaVec, float smooth);
+  bool ApplyTurretLookConcepts(const Vector2D& deltaVec, float smooth, VehicleTurretInputMode mode);
+  bool ResetTurretLookMouse();
+  bool ResetTurretLookConcepts();
 };
 
 IVehicleInputBackend& GetVehicleInputBackend();

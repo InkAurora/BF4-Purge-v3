@@ -81,6 +81,7 @@ namespace Cfg {
 	extern float radius;
 	extern float smoothSoldier;
 	extern float smoothVehicle;
+	extern int vehicleTurretInputMode;
 
 	extern float smoothTV;
 

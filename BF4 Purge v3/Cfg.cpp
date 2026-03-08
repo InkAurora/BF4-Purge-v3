@@ -79,6 +79,7 @@ namespace Cfg {
 	float radius = (float)ESP::predictionCrossRadius * 3;
 	float smoothSoldier = 3.2f;
 	float smoothVehicle = 2.5f;
+	int vehicleTurretInputMode = 0;
 
 	float smoothTV = 1.f;
 

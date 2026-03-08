@@ -1,5 +1,6 @@
 #include "includes.h"
 #include "Interface.h"
+#include "TypeInfo.h"
 #include "VMTHooking.h"
 
 // --------------------------------------------------------------------------------
@@ -35,6 +36,8 @@ DWORD WINAPI Main(HMODULE hModule) {
   }
 
   HooksManager::Get()->Install();
+
+  DumpEntryComponentLayouts();
 
   F::pVisuals = std::make_unique<Visuals>();
   F::pFeatures = std::make_unique<Features>();

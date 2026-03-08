@@ -225,3 +225,6 @@ public:
 ClassInfo* FindClassInfo(const char* ClassName);
 
 void DumpClassPointers();
+void DumpClassLayout(const char* className);
+void DumpClassesContaining(const char* token, const char* outputFileName);
+void DumpEntryComponentLayouts();

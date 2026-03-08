@@ -4,8 +4,49 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include "xorstr.hpp"
 #include "Engine.h"
+
+namespace {
+std::string GetTypeInfoName(TypeInfo* typeInfo)
+{
+	if (!IsValidPtr(typeInfo) || !IsValidPtr(typeInfo->m_InfoData) || !IsValidPtr(typeInfo->m_InfoData->m_Name))
+		return "Unknown";
+
+	return typeInfo->m_InfoData->m_Name;
+}
+
+void AppendClassLayout(std::stringstream& ss, ClassInfo* classInfo)
+{
+	if (!IsValidPtr(classInfo) || !IsValidPtr(classInfo->m_InfoData) || !IsValidPtr(classInfo->m_InfoData->m_Name))
+		return;
+
+	ss << "Class: " << classInfo->m_InfoData->m_Name << "\n";
+	ss << "Total fields: " << classInfo->m_TotalFieldCount << "\n";
+
+	if (IsValidPtr(classInfo->m_Super) && IsValidPtr(classInfo->m_Super->m_InfoData) && IsValidPtr(classInfo->m_Super->m_InfoData->m_Name))
+		ss << "Super: " << classInfo->m_Super->m_InfoData->m_Name << "\n";
+
+	for (unsigned int i = 0; i < classInfo->m_TotalFieldCount; ++i)
+	{
+		auto* fieldInfo = classInfo->m_FieldInfos[i];
+		if (!IsValidPtr(fieldInfo))
+			continue;
+
+		auto* fieldData = fieldInfo->GetFieldInfoData();
+		if (!IsValidPtr(fieldData) || !IsValidPtr(fieldData->m_Name))
+			continue;
+
+		ss << "  [" << std::setw(3) << i << "] +0x"
+			<< std::hex << std::uppercase << fieldData->m_FieldOffset
+			<< std::dec << " " << GetTypeInfoName(fieldData->m_FieldTypePtr)
+			<< " " << fieldData->m_Name << "\n";
+	}
+
+	ss << "\n";
+}
+}
 
 ClassInfo* FindClassInfo(const char* ClassName)
 {
@@ -71,6 +112,71 @@ void DumpClassPointers()
 		file << ss.str() << std::endl;
 		file.close();
 	}
+
+	doOnce = false;
+}
+
+void DumpClassLayout(const char* className)
+{
+	if (!className || !className[0])
+		return;
+
+	auto* classInfo = FindClassInfo(className);
+	if (!IsValidPtr(classInfo))
+		return;
+
+	std::stringstream ss;
+	AppendClassLayout(ss, classInfo);
+
+	std::ofstream file(std::string(className) + xorstr_("_layout.txt"));
+	if (!file.is_open())
+		return;
+
+	file << ss.str();
+}
+
+void DumpClassesContaining(const char* token, const char* outputFileName)
+{
+	if (!token || !token[0] || !outputFileName || !outputFileName[0])
+		return;
+
+	TypeInfo* currentTypeInfo = TypeInfo::GetFirst();
+	if (!IsValidPtr(currentTypeInfo))
+		return;
+
+	std::stringstream ss;
+	do
+	{
+		if (currentTypeInfo->GetTypeCode() != BasicTypesEnum::kTypeCode_Class)
+			continue;
+
+		auto* classInfo = reinterpret_cast<ClassInfo*>(currentTypeInfo);
+		if (!IsValidPtr(classInfo->m_InfoData) || !IsValidPtr(classInfo->m_InfoData->m_Name))
+			continue;
+
+		if (strstr(classInfo->m_InfoData->m_Name, token) == nullptr)
+			continue;
+
+		AppendClassLayout(ss, classInfo);
+	} while ((currentTypeInfo = currentTypeInfo->m_Next) != nullptr);
+
+	std::ofstream file(outputFileName);
+	if (!file.is_open())
+		return;
+
+	file << ss.str();
+}
+
+void DumpEntryComponentLayouts()
+{
+	static bool doOnce = true;
+	if (!doOnce)
+		return;
+
+	DumpClassesContaining(xorstr_("Entry"), xorstr_("EntryLayouts.txt"));
+	DumpClassesContaining(xorstr_("Turret"), xorstr_("TurretLayouts.txt"));
+	DumpClassLayout(xorstr_("EntryComponent"));
+	DumpClassLayout(xorstr_("ClientPlayerEntryComponent"));
 
 	doOnce = false;
 }

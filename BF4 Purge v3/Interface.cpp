@@ -1,6 +1,7 @@
 #include "Interface.h"
 #include "Cfg.h"
 #include "xorstr.hpp"
+#include "VehicleInput.h"
 #include "VMTHooking.h"
 
 typedef long(__stdcall* present)(IDXGISwapChain*, UINT, UINT);
@@ -232,6 +233,13 @@ static long __stdcall detour_present(IDXGISwapChain* p_swap_chain, UINT sync_int
 		ImGui::SliderFloat(xorstr_("##aimbotFOV"), &Cfg::AimBot::radius, 5.0f, 200.0f, xorstr_("FOV: %1.f"));
 		ImGui::SliderFloat(xorstr_("##soldierSmoothing"), &Cfg::AimBot::smoothSoldier, 1.0f, 10.0f, xorstr_("Smoothing: %.1f"));
 		ImGui::SliderFloat(xorstr_("##vehicleSmoothing"), &Cfg::AimBot::smoothVehicle, 1.0f, 10.0f, xorstr_("Smoothing Vehicle: %.1f"));
+		const char* turretInputModes[] = {
+		  GetVehicleTurretInputModeName(VehicleTurretInputMode::MouseDevice),
+		  GetVehicleTurretInputModeName(VehicleTurretInputMode::CrosshairConcepts),
+		  GetVehicleTurretInputModeName(VehicleTurretInputMode::CameraConcepts),
+		  GetVehicleTurretInputModeName(VehicleTurretInputMode::RightStickConcepts),
+		};
+		ImGui::Combo(xorstr_("Vehicle Turret Input"), &Cfg::AimBot::vehicleTurretInputMode, turretInputModes, IM_ARRAYSIZE(turretInputModes));
 		static int selected = UpdatePoseResultData::BONES::Neck;
 		ImGui::RadioButton(xorstr_("Head"), &selected, UpdatePoseResultData::BONES::Head); ImGui::SameLine();
 		ImGui::RadioButton(xorstr_("Neck"), &selected, UpdatePoseResultData::BONES::Neck); ImGui::SameLine();
