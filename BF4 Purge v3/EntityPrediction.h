@@ -44,5 +44,8 @@ public:
 	ClientPlayer* pLocal, ClientPlayer* pTarget, const Vector& aimPoint,
 	PredictionData_s* dataOut = nullptr,
 	VeniceClientMissileEntity* pDataIn = nullptr,
-	WeaponData_s* pWeaponData = nullptr);
+	WeaponData_s* pWeaponData = nullptr,
+	const Vector* overrideTargetVelocity = nullptr);
+
+  static bool TOWPrediction();
 };

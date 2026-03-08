@@ -88,6 +88,7 @@ namespace Cfg {
 	bool useTVPrediction = false;
 
 	float TEST = 0.7f;
+	float towPredMult = 1.0f;
   }
 
   namespace DBG {

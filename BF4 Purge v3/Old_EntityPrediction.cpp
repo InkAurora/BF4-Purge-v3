@@ -1,7 +1,5 @@
 #include "EntityPrediction.h"
 
-#define PI_2     1.57079632679489661923
-
 float Prediction::ComputeMissileFinalVelocity(float initSpd, float maxSpd, float accel, float engIgnTime, float dist, float* travelTime) {
   //Its easier when you draw that in paint :D
   if ((accel == 0.0f) || (maxSpd < initSpd)) return 0.0f;
@@ -44,138 +42,137 @@ float Prediction::ComputeMissileFinalVelocity(float initSpd, float maxSpd, float
 bool Prediction::ComputePredictedPointInSpace(const Vector& src, const Vector& dst, const Vector& dstVel, const float bulletVel, const float bulletGravity, PredictionData_s* out, const float overrideTravelTime, const float zeroying, const AngularPredictionData_s* angularDataIn) {
   Vector relativePos; D3DXVec3Subtract(&relativePos, &dst, &src);
 
-  auto pLocal = PlayerManager::GetInstance()->GetLocalPlayer();
-  auto pLSoldier = pLocal->GetSoldierEntity();
-  auto srcVel = *pLSoldier->GetVelocity();
 
-  Vector effectiveVel; D3DXVec3Subtract(&effectiveVel, &dstVel, &srcVel);
-  Vector scaledVel;
 
-  const bool useAngularPrediction =
-	Cfg::ESP::predictionUseAngularVelocity && angularDataIn && angularDataIn->valid &&
-	D3DXVec3LengthSq(&angularDataIn->angularVelocity) != 0.0f;
-  Cfg::DBG::_internalUseCurve = useAngularPrediction;
+  if (angularDataIn && angularDataIn->valid)
+	Cfg::DBG::_internalUseCurve = D3DXVec3LengthSq(&angularDataIn->angularVelocity) != 0.0f;
 
-  // Use epsilon to decide gravity branch to avoid numerical instability on tiny gravity
-  constexpr float kGravityEpsilon = 1e-4f;
-  const bool useGravity = std::fabs(bulletGravity) > kGravityEpsilon;
+  // Ballistic equation
+  // https://en.wikipedia.org/wiki/Projectile_motion
+  //
+  // (0.25*g^2)*(t^4) + (-g*vy1)*(t^3) + (vx1^2+vy1^2+vz1^2 - g*py1 - |v|^2)*(t^2) + 2*(px1*vx1+py1*vy1+pz1*vz1)*(t) + (px1^2+py1^2+pz1^2) = 0
+  // x^4 + a*x^3 + b*x^2 + c*x + d
+  //
+  // G = bullet gravity
+  // V = target velocity vector
+  // P = target position relative to shooter vector
+  // S = bullet speed 
+  // T = time to impact
+  //
+  //     a           b                c               d       e
+  // 0.25(G^2)T^4 + (VG)T^3 + (PG + V^2 - S^2)T^2 + 2(PV)T + P^2 = 0    | /e
+  //
+  // when G == 0
+  //
+  // (V^2 - S^2)T^2 + 2(PV)T + P^2 = 0
 
-  if (useGravity) {
-	Vector gravity = { 0, bulletGravity, 0 };
-	// Guard against tiny a1 leading to huge coefficients
-	double a1 = 0.25f * D3DXVec3LengthSq(&gravity);
-	if (a1 == 0.0) {
-	  // Fallback to no-gravity solution
-	} else {
-	  double b1 = -1.0f * D3DXVec3Dot(&gravity, &effectiveVel);
-	  double c1 = -1.0f * D3DXVec3Dot(&gravity, &relativePos) + D3DXVec3LengthSq(&effectiveVel) - (bulletVel * bulletVel);
-	  double d1 = 2.0f * D3DXVec3Dot(&effectiveVel, &relativePos);
-	  double e1 = D3DXVec3LengthSq(&relativePos);
+  if (bulletGravity != 0.0f) {
+	const double a = 0.25 * bulletGravity * bulletGravity;
+	const double b = dstVel.y * bulletGravity;
+	const double c = (relativePos.y * bulletGravity) + D3DXVec3Dot(&dstVel, &dstVel) - (bulletVel * bulletVel);
+	const double d = 2.0f * (D3DXVec3Dot(&relativePos, &dstVel));
+	const double e = D3DXVec3Dot(&relativePos, &relativePos);
 
-	  auto roots = solve_quartic(b1 / a1, c1 / a1, d1 / a1, e1 / a1);
-	  double t = 0.0f;
-	  // Filter for smallest positive, finite root
+	out->travelTime = 0.0f;
+	if (overrideTravelTime > 0.0f) out->travelTime = overrideTravelTime;
+
+	if (out->travelTime == 0.0f) {
+	  const auto& roots = solve_quartic(b / (a), c / (a), d / (a), e / (a));
 	  for (int i = 0; i < 4; ++i) {
-		const double r = roots[i].real();
-		if (r > 0.0 && std::isfinite(r) && (r < t || t == 0.0))
-		  t = r;
+		if (roots[i].real() > 0.0f && (out->travelTime == 0.0f || roots[i].real() < out->travelTime))
+		  out->travelTime = roots[i].real();
 	  }
-
-	  if (overrideTravelTime > 0.0f) t = overrideTravelTime;
-
-	  if (t <= 0.0f) return false;
-
-	  out->travelTime = t;
-
-	  Vector targetVel = dstVel;
-	  if (useAngularPrediction && Cfg::ESP::_internalCurveIterationCount > 0)
-		PredictFinalRotation(
-		  dstVel, angularDataIn->angularVelocity, out->travelTime,
-		  angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
-		  &targetVel);
-
-	  Vector futurePos;
-	  scaledVel = targetVel * t;
-	  D3DXVec3Add(&futurePos, &dst, &scaledVel);
-	  Vector velAdjustment = srcVel * t;
-	  Vector drop = gravity * (0.5f * t * t);
-	  D3DXVec3Subtract(&out->hitPos, &futurePos, &velAdjustment);
-	  D3DXVec3Subtract(&out->hitPos, &out->hitPos, &drop);
-
-	  out->bulletDrop = bulletGravity;
-	  out->bulletVel = bulletVel;
-	  out->distance = Misc::Distance3D(src, out->hitPos);
-	  out->origin = dst;
-
-	  if (zeroying != 0.0f)
-		out->hitPos.y += std::sinf(zeroying) * out->distance;
-
-	  return true;
 	}
+
+	if (out->travelTime <= 0.0f) return false;
+
+	auto targetVel = dstVel;
+	if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
+	  PredictFinalRotation(
+		dstVel, angularDataIn->angularVelocity, out->travelTime,
+		angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
+		&targetVel);
+
+	// predicted bullet velocity vector at given time
+	double hitVelX = (relativePos.x / out->travelTime) + targetVel.x;
+	double hitVelY = (relativePos.y / out->travelTime) + targetVel.y - (0.5f * bulletGravity * out->travelTime);
+	double hitVelZ = (relativePos.z / out->travelTime) + targetVel.z;
+
+	// predicted vector with compenstation = P + VT + 0.5*G*T^2
+	out->hitPos.x = (src.x + hitVelX * out->travelTime);
+	out->hitPos.y = (src.y + hitVelY * out->travelTime);
+	out->hitPos.z = (src.z + hitVelZ * out->travelTime);
+
+	out->bulletDrop = bulletGravity;
+	out->bulletVel = bulletVel;
+	out->distance = Misc::Distance3D(src, out->hitPos);
+	out->origin = dst;
+
+	//Fix for zeroing
+	if (zeroying != 0.0f)
+	  out->hitPos.y += std::sinf(zeroying) * out->distance;
+
+	return true;
   }
 
-  // No-gravity (or gravity too small): solve quadratic/linear
-  const double a = D3DXVec3LengthSq(&effectiveVel) - (bulletVel * bulletVel);
-  const double b = 2.0 * D3DXVec3Dot(&relativePos, &effectiveVel);
-  const double c = D3DXVec3LengthSq(&relativePos);
+  const double a = (D3DXVec3Dot(&dstVel, &dstVel)) - (bulletVel * bulletVel);
+  const double b = 2.0 * (D3DXVec3Dot(&relativePos, &dstVel));
+  const double c = D3DXVec3Dot(&relativePos, &relativePos);
 
-  double t = 0.0;
-  if (std::fabs(a) < 1e-8) {
-	// Linear case: a ~ 0 -> b * t + c = 0
-	if (std::fabs(b) < 1e-12) return false; // No solution
-	t = -c / b;
-  } else {
-	const double disc = b * b - (4 * a * c);
-	if (disc > 0.0) {
-	  const auto sqrtDisc = std::sqrt(disc);
-	  const auto t1 = (-b - sqrtDisc) / (2 * a);
-	  const auto t2 = (-b + sqrtDisc) / (2 * a);
-	  if (t1 > 0.0 && t2 > 0.0) t = std::min<double>(t1, t2);
-	  else if (t1 < 0.0 && t2 > 0.0) t = t2;
-	  else if (t1 > 0.0 && t2 < 0.0) t = t1;
-	  else t = 0.0;
-	} else if (disc == 0.0) {
-	  t = ((-b) / (2 * a));
-	} else {
-	  return false;
-	}
+  if (a == 0.0f) return false;
+  double d = b * b - (4 * a * c);
+
+  //We have to find smallest non-negative delta time
+  double t = 0.f;
+  if (d > 0.f) {
+	const auto t1 = (-b - sqrt(d)) / (2 * a);
+	const auto t2 = (-b + sqrt(d)) / (2 * a);
+	if (t1 > 0.f && t2 > 0.f) t = std::min<double>(t1, t2);
+	else if (t1 < 0.f && t2 > 0.f) t = t2;
+	else if (t1 > 0.f && t2 < 0.f) t = t1;
+	else t = 0.f;
   }
-
-  if (overrideTravelTime > 0.0f) t = overrideTravelTime;
-
-  if (t <= 0.0f || !std::isfinite(t)) return false;
+  else if (d == 0.0f) t = ((-b) / (2 * a));
+  else return false;
 
   out->travelTime = t;
 
-  Vector targetVel = dstVel;
-  if (useAngularPrediction && Cfg::ESP::_internalCurveIterationCount > 0)
+  if (overrideTravelTime > 0.0f) out->travelTime = overrideTravelTime;
+
+  if (out->travelTime <= 0.0f) return false;
+
+
+  auto targetVel = dstVel;
+  if (Cfg::DBG::_internalUseCurve && Cfg::ESP::_internalCurveIterationCount > 0 && angularDataIn && angularDataIn->valid)
 	PredictFinalRotation(
 	  dstVel, angularDataIn->angularVelocity, out->travelTime,
 	  angularDataIn->orientation, dst, &Cfg::DBG::_internalPredictedOrientation,
 	  &targetVel);
 
-  scaledVel = targetVel * t;
-  Vector futurePos; D3DXVec3Add(&futurePos, &dst, &scaledVel);
-  Vector velAdjustment = srcVel * t;
-  D3DXVec3Subtract(&out->hitPos, &futurePos, &velAdjustment);
+  // predicted bullet velocity vector at given time
+  double hitVelX = ((relativePos.x / out->travelTime)) + targetVel.x;
+  double hitVelY = ((relativePos.y / out->travelTime)) + targetVel.y;
+  double hitVelZ = ((relativePos.z / out->travelTime)) + targetVel.z;
+
+  // predicted vector with compenstation = P + VT + 0.5*G*T^2
+  out->hitPos.x = (src.x + hitVelX * out->travelTime);
+  out->hitPos.y = (src.y + hitVelY * out->travelTime);
+  out->hitPos.z = (src.z + hitVelZ * out->travelTime);
 
   out->bulletDrop = bulletGravity;
   out->bulletVel = bulletVel;
   out->distance = Misc::Distance3D(src, out->hitPos);
   out->origin = dst;
 
+  //Fix for zeroing
   if (zeroying != 0.0f)
 	out->hitPos.y += std::sinf(zeroying) * out->distance;
 
   return true;
 }
 
-static int framecount = 0;
-
 bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarget, const Vector& aimPoint, PredictionData_s* dataOut, VeniceClientMissileEntity* pDataIn, WeaponData_s* pWeaponData, const Vector* overrideTargetVelocity) {
-  if (!IsValidPtr(pLocal) || (!IsValidPtr(pTarget) && !overrideTargetVelocity)) return false;
-
-  framecount++;
+  if (!IsValidPtr(pLocal) || !IsValidPtr(pTarget)) return false;
 
   auto pLocalSoldier = pLocal->GetSoldierEntity();
   if (!pLocalSoldier) return false;
@@ -187,20 +184,18 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 
   Vector targetVelocity = ZERO_VECTOR;
 
-  if (overrideTargetVelocity) {
-	targetVelocity = *overrideTargetVelocity;
-  } else if (auto pVehicle = pTarget->GetClientVehicleEntity(); IsValidPtr(pVehicle)) {
+  if (auto pVehicle = pTarget->GetClientVehicleEntity(); IsValidPtr(pVehicle)) {
 	targetVelocity = pVehicle->m_VelocityVec;
 
-	if (Cfg::ESP::predictionUseAngularVelocity && IsValidPtr(pVehicle->m_pData)
-	  && pVehicle->m_pData->IsAirVehicle() && IsValidPtr(pVehicle->GetChassisComponent())) {
+	if (IsValidPtr(pVehicle->GetChassisComponent())) {
 	  Matrix modelMatrix;
 	  pVehicle->GetTransform(&modelMatrix);
 	  D3DXQuaternionRotationMatrix(&angularData.orientation, &modelMatrix);
 	  angularData.angularVelocity = pVehicle->GetChassisComponent()->m_AngularVelocity;
 	  angularData.valid = true;
 	}
-  } else if (auto pTargetSoldier = pTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
+  }
+  else if (auto pTargetSoldier = pTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
 	targetVelocity = *pTargetSoldier->GetVelocity();
 
 	//Thats the same flag you have to set to update non-visible bones.
@@ -218,23 +213,21 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 	weaponType = pWeaponFiring->GetWeaponClass();
 
   auto startPosition = G::viewPos;
-
-  Matrix shootSpace; pLocal->GetWeaponShootSpace(shootSpace);
-  startPosition = (Vector)&shootSpace._41;
-
-  float overrideRocketTravelTime = -0.0f;
+  float overrideRocketTravelTime = 0.0f;
   auto pFiring = pLocalSoldier->GetFiringData();
   if (IsValidPtr(pFiring) && IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData)) {
-	if (pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
-	  == ProjectileEntityData::AntHitReactionWeaponType_Explosion) { //Launcher check
+	if (IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData) &&
+	  pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
+	  == ProjectileEntityData::AntHitReactionWeaponType_Explosion) //Launcher check
+	{
 	  auto pMissileData = reinterpret_cast<MissileEntityData*>(pFiring->m_ShotConfigData.m_ProjectileData);
 	  if (IsValidPtr(pMissileData) && !pLocal->InVehicle() && weaponType == WeaponClass::At) {
-		const auto isTOW = pMissileData->IsTOW();
+		const auto isLG = pMissileData->IsTOW();
 		const auto& ignTime = pMissileData->m_EngineTimeToIgnition;
 		const auto& initSpd = pFiring->m_ShotConfigData.m_Speed.z;
 		const auto& accel = pMissileData->m_EngineStrength;
 		const auto& maxSpd = pMissileData->m_MaxSpeed;
-		startPosition = (!isTOW) ? G::viewPos : (pDataIn != nullptr) ? pDataIn->m_Position : G::viewPos;
+		startPosition = (!isLG) ? G::viewPos : (pDataIn != nullptr) ? pDataIn->m_Position : G::viewPos;
 		auto dst = Misc::Distance3D(startPosition, aimPoint);
 
 		//Calculating final velocity first time to solve 't' at given 'dst' to target
@@ -246,10 +239,7 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 
 		//Calculate final velocity again for new target position 
 		bulletVelocity = ComputeMissileFinalVelocity(initSpd, maxSpd, accel, ignTime, dst);
-		float missileGravity = pMissileData->m_Gravity;
-		if ((pMissileData->IsTOW() || pMissileData->IsLockable()) && !pMissileData->m_ApplyGravityWhenGuided)
-		  missileGravity = 0.0f;
-		bulletGravity = missileGravity;
+		bulletGravity = pMissileData->m_Gravity > 0.f ? 0.0f : pMissileData->m_Gravity;
 	  }
 
 	  if (pLocal->InVehicle() && IsValidPtr(pWeaponData)) {
@@ -298,14 +288,7 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 
   //Zeroing fix
   float zeroEntry = 0.0f;
-  bool allowZeroing = true;
-  if (IsValidPtr(pFiring) && IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData)) {
-	allowZeroing = pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
-	  != ProjectileEntityData::AntHitReactionWeaponType_Explosion;
-  }
-
-  auto pWeaponComp = pLocalSoldier->m_pWeaponComponent;
-  if (allowZeroing && IsValidPtr(pWeaponComp) && !pLocal->InVehicle()) {
+  if (auto pWeaponComp = pLocalSoldier->m_pWeaponComponent; IsValidPtr(pWeaponComp) && !pLocal->InVehicle()) {
 	if (auto pWeapon = pWeaponComp->GetActiveSoldierWeapon(); IsValidPtr(pWeapon)) {
 	  if (auto pClientWeapon = pWeapon->m_pWeapon; IsValidPtr(pClientWeapon) && IsValidPtr(pClientWeapon->m_pWeaponModifier)) {
 		auto ZeroEntry = WeaponZeroingEntry(-1.0f, -1.0f);
@@ -322,34 +305,6 @@ bool Prediction::GetPredictedAimPoint(ClientPlayer* pLocal, ClientPlayer* pTarge
 		  float ZeroDrop = 0.5f * bulletGravity * ZeroAirTime * ZeroAirTime;
 		  zeroEntry = atan2(ZeroDrop, ZeroEntry.m_ZeroDistance);
 		}
-
-		int zeroAdjust = -1;
-		float d = dataOut->distance;
-
-		if (d > 150) zeroAdjust = 0;
-		if (d > 250) zeroAdjust = 1;
-		if (d > 350) zeroAdjust = 2;
-		if (d > 450) zeroAdjust = 3;
-		if (d > 750) zeroAdjust = 4;
-
-		if (pWeaponComp->m_ZeroingDistanceLevel != zeroAdjust && (GetAsyncKeyState(VK_MENU) & 0x8000)) {
-		  if (IsValidPtr(pFiring) && IsValidPtr(pFiring->m_ShotConfigData.m_ProjectileData)) {
-			if (pFiring->m_ShotConfigData.m_ProjectileData->m_HitReactionWeaponType
-			  == ProjectileEntityData::AntHitReactionWeaponType_SniperRifle) {
-			  CHAR* lparam = new char('V');
-			  static int z0 = -1;
-			  if (z0 == pWeaponComp->m_ZeroingDistanceLevel || framecount > (G::inputFPS / 2)) {
-				framecount = 0;
-				CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Misc::Send, lparam, 0, 0);
-				z0 = pWeaponComp->m_ZeroingDistanceLevel;
-				if (z0 == 4) z0 = -1;
-				else z0++;
-			  }
-			}
-		  }
-		}
-
-		//Cfg::DBG::testString = to_string(pWeaponComp->m_ZeroingDistanceLevel) + " " + to_string(lround(ZeroEntry.m_ZeroDistance));
 	  }
 	}
   }
@@ -382,27 +337,17 @@ void Prediction::PredictFinalRotation(const Vector& linearVel, const Vector& ang
 	result.y = (num7 + num12) * vec.x + (1.f - (num4 + num6)) * vec.y + (num9 - num10) * vec.z;
 	result.z = (num8 - num11) * vec.x + (num9 + num10) * vec.y + (1.f - (num4 + num5)) * vec.z;
 	return result;
-  };
+	};
 
   Quaternion predOrientation = orientation;
-  D3DXQuaternionNormalize(&predOrientation, &predOrientation);
   Vector predLinVel = linearVel;
   Vector predDisplacement = curPosition;
-  const auto iterationCount = (std::max)(1, Cfg::ESP::_internalCurveIterationCount);
-  const double deltaTime = (predTime * Cfg::ESP::_internalCurvePredTimeMultiplier / 100.0) / iterationCount;
-  for (int i = 0; i < iterationCount; ++i) {
+  float deltaTime = (predTime * Cfg::ESP::_internalCurvePredTimeMultiplier / 100.0f) / Cfg::ESP::_internalCurveIterationCount;
+  for (int i = 0; i < Cfg::ESP::_internalCurveIterationCount; ++i) {
 	PredictLinearMove(predLinVel, deltaTime, predDisplacement, &predDisplacement);
-	const auto angularSpeed = D3DXVec3Length(&angularVel);
-	Quaternion rotationFromAngularVelocity = { 0.0f, 0.0f, 0.0f, 1.0f };
-	if (angularSpeed > 0.0f && std::isfinite(deltaTime)) {
-	  const auto rotationAngle = angularSpeed * deltaTime;
-	  Vector rotationAxis; D3DXVec3Normalize(&rotationAxis, &angularVel);
-	  D3DXQuaternionRotationAxis(&rotationFromAngularVelocity, &rotationAxis, rotationAngle);
-	}
+	PredictRotation(angularVel, predOrientation, deltaTime, &predOrientation);
 
-	predOrientation = predOrientation * rotationFromAngularVelocity;
-	D3DXQuaternionNormalize(&predOrientation, &predOrientation);
-	predLinVel = QuaternionTranslation(rotationFromAngularVelocity, predLinVel);
+	predLinVel = QuaternionTranslation(predOrientation, Vector(0.0f, 0.0f, D3DXVec3Length(&predLinVel)));
 	Cfg::DBG::_internalPredictionCurve[i] = predDisplacement;
   }
   *predLinearVelOut = predLinVel;
@@ -421,21 +366,4 @@ void Prediction::PredictRotation(const Vector& angularVelocity, const Quaternion
   D3DXQuaternionRotationAxis(&rotationFromAngularVelocity, &rotationAxis, rotationAngle);
 
   *out = orientation * rotationFromAngularVelocity;
-}
-
-bool Prediction::TOWPrediction() {
-  auto pTarget = PreUpdate::preUpdatePlayersData.pBestTarget;
-  if (!IsValidPtr(pTarget)) return false;
-
-  Vector targetVel = ZERO_VECTOR;
-  if (auto pVeh = pTarget->GetClientVehicleEntity(); IsValidPtr(pVeh))
-	targetVel = pVeh->m_VelocityVec;
-  else if (auto pSoldier = pTarget->GetSoldierEntity(); IsValidPtr(pSoldier))
-	targetVel = *pSoldier->GetVelocity();
-  else
-	return false;
-
-  PreUpdate::predictionData.hitPos =
-	PreUpdate::predictionData.origin + targetVel * (PreUpdate::TOWTimeToHit * Cfg::AimBot::towPredMult);
-  return true;
 }

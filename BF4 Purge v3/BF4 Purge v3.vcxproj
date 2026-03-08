@@ -167,6 +167,7 @@
     <ClCompile Include="quartic.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="TypeInfo.cpp" />
+    <ClCompile Include="VehicleInput.cpp" />
     <ClCompile Include="Visuals.cpp" />
     <ClCompile Include="VMTHooking.cpp" />
   </ItemGroup>
@@ -193,6 +194,7 @@
     <ClInclude Include="quartic.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="TypeInfo.h" />
+    <ClInclude Include="VehicleInput.h" />
     <ClInclude Include="Visuals.h" />
     <ClInclude Include="VMTHooking.h" />
     <ClInclude Include="xorstr.hpp" />

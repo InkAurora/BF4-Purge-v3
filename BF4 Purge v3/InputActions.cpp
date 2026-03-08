@@ -1,6 +1,6 @@
 #include "InputActions.h"
-
-const double PI = 3.141592653589793238463L;
+#include "EntityPrediction.h"
+#include "VehicleInput.h"
 
 void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const WeaponData_s& pVehData, const Vector& targetPos, VeniceClientMissileEntity* pMissile) {
   if (!Cfg::AimBot::enable) return;
@@ -21,6 +21,14 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
 
   Vector2D deltaVec = G::viewPos2D - pos2D;
   PreUpdate::isValid = this->isAutoPiloting;
+
+  if (IsValidPtr(pMissile) && IsValidPtr(pMissile->m_pMissileEntityData) && pMissile->m_pMissileEntityData->IsTOW()) {
+	PreUpdate::isTOWLocked = true;
+	TOWMissileControl(pLocal, pVeh, targetPos, pMissile);
+	return;
+  }
+
+  PreUpdate::isTOWLocked = false;
 
   if (IsValidPtr(pVeh) && IsValidPtr(pVeh->m_pData) && (int)pLocal->m_EntryId < 4) {
 	if (Cfg::Misc::noOverheat) OverheatControll();
@@ -134,18 +142,20 @@ void InputActions::JetWeaponsControll(ClientVehicleEntity* pVeh, const Vector& t
 
   auto yaw = CalcDelta(Left, dt, halfFov);
   auto pitch = CalcDelta(Up, dt, halfFov);
-  auto roll = yaw; //You could change that to simulate 'A' and 'D' movement instead of roll, works well too.
+  auto roll = yaw;
 
-  //There. I played with these numbers countless hours to get to the best result. 
-  //You could too, good luck !
   float sens = ReRange(delta, 11.5, 35.f, 11.5f, 12.f);
   if (delta <= 30.0f) sens *= 1.5f;
   if (delta <= 15) sens *= 1.2f;
 
-  //Ah and if you have inverted (or normal?) flying controlls, just negate pitch.
-  input[ConceptYaw] = -yaw * sens;
-  input[ConceptPitch] = -pitch * sens;
-  input[ConceptRoll] = -roll * sens * .85f;
+  VehicleAxesInput axes = {};
+  axes.writeYaw = true;
+  axes.writePitch = true;
+  axes.writeRoll = true;
+  axes.yaw = -yaw * sens;
+  axes.pitch = -pitch * sens;
+  axes.roll = -roll * sens * .85f;
+  GetVehicleInputBackend().ApplyAxes(axes);
 
   this->isAutoPiloting = true;
 }
@@ -156,11 +166,7 @@ void InputActions::TVMissileControll(ClientVehicleEntity* pVeh, const Vector& ta
   if (!IsValidPtr(pVeh) || !IsValidPtr(input)) return;
 
   if (pVeh->IsTVGuidedMissile()) {
-	//Fly time = 5s;
-	//Max dist ~500.f
-
 	Vector dt = targetPos - G::viewPos;
-
 	auto dtLength = D3DXVec3Length(&dt);
 	if (dtLength != 0.0f) dt /= dtLength;
 
@@ -175,51 +181,142 @@ void InputActions::TVMissileControll(ClientVehicleEntity* pVeh, const Vector& ta
 
 	auto yaw = CalcDelta(Left, dt, fov);
 	auto pitch = CalcDelta(Up, dt, fov);
-	auto roll = yaw;
-
-	//Same as above, However there is one thing to note: maximalize 'sens' when getting close to the target 
-	//to prevent him from dodging the rocket.
 
 	float sens = ReRange(delta, .5f, 200.f, .5f, 12.f);
 	if (Misc::Distance3D(G::viewPos, targetPos) <= 200.0f)
 	  sens = 750.f;
 
-	input[ConceptYaw] = -yaw * sens;
-	input[ConceptPitch] = pitch * sens;
+	VehicleAxesInput axes = {};
+	axes.writeYaw = true;
+	axes.writePitch = true;
+	axes.yaw = -yaw * sens;
+	axes.pitch = pitch * sens;
+	GetVehicleInputBackend().ApplyAxes(axes);
+  }
+}
+
+void InputActions::TOWMissileControl(ClientPlayer* pLocal, ClientVehicleEntity* pVeh, const Vector& targetPos, VeniceClientMissileEntity* pMissile) {
+  PreUpdate::TOWForwardVec = ZERO_VECTOR;
+
+  if (!(GetAsyncKeyState(VK_MENU) & 0x8000)) return;
+
+  if (!IsValidPtr(pLocal) || !IsValidPtr(pMissile) || !IsValidPtr(pMissile->m_pMissileEntityData)) return;
+
+  bool isInVehicle = pLocal->InVehicle();
+  if (isInVehicle && !IsValidPtr(pVeh)) return;
+
+  D3DXMATRIX missileMatrix;
+  ((ClientControllableEntity*)pMissile)->GetTransform(&missileMatrix);
+  auto missilePos = Vector(missileMatrix._41, missileMatrix._42, missileMatrix._43);
+  auto missileForwardVec = Vector(missileMatrix._31, missileMatrix._32, missileMatrix._33);
+  PreUpdate::TOWForwardVec = missileForwardVec;
+
+  float distToTarget = Misc::Distance3D(missilePos, targetPos);
+
+  // Track missile identity so elapsed flight time is measured correctly mid-flight
+  static VeniceClientMissileEntity* s_trackedMissile = nullptr;
+  static ULONGLONG s_launchMs = 0;
+  if (pMissile != s_trackedMissile) {
+	s_trackedMissile = pMissile;
+	s_launchMs = GetTickCount64();
+  }
+
+  const float initSpd       = pMissile->m_pMissileEntityData->m_InitialSpeed;
+  const float maxSpd        = pMissile->m_pMissileEntityData->m_MaxSpeed;
+  const float accel         = pMissile->m_pMissileEntityData->m_EngineStrength;
+  const float ignTime       = pMissile->m_pMissileEntityData->m_EngineTimeToIgnition;
+  const float elapsedTime   = (GetTickCount64() - s_launchMs) * 0.001f;
+  const float accelDuration = (accel > 0.0f && maxSpd > initSpd) ? (maxSpd - initSpd) / accel : 0.0f;
+
+  // Current instantaneous speed based on which flight phase the missile is in
+  float missileSpeed;
+  if (elapsedTime < ignTime)
+	missileSpeed = initSpd;
+  else if (elapsedTime < ignTime + accelDuration)
+	missileSpeed = initSpd + accel * (elapsedTime - ignTime);
+  else
+	missileSpeed = maxSpd;
+
+  // Time remaining to target: integrate only the phases still ahead of the missile
+  float timeToHit = 0.0f;
+  if (elapsedTime >= ignTime + accelDuration) {
+	// Cruise phase - constant max speed
+	if (maxSpd > 0.0f) timeToHit = distToTarget / maxSpd;
+  } else if (elapsedTime >= ignTime) {
+	// Acceleration phase - integrate remaining burn, then cruise
+	const float remAccelTime    = (ignTime + accelDuration) - elapsedTime;
+	const float distDuringAccel = missileSpeed * remAccelTime + 0.5f * accel * remAccelTime * remAccelTime;
+	const float distCruise      = distToTarget > distDuringAccel ? distToTarget - distDuringAccel : 0.0f;
+	timeToHit = remAccelTime + (maxSpd > 0.0f ? distCruise / maxSpd : 0.0f);
+  } else {
+	// Ignition (coast) phase - integrate remaining coast, full burn, then cruise
+	const float remIgnTime      = ignTime - elapsedTime;
+	const float distDuringAccel = initSpd * accelDuration + 0.5f * accel * accelDuration * accelDuration;
+	const float distCruise      = distToTarget > initSpd * remIgnTime + distDuringAccel
+									? distToTarget - initSpd * remIgnTime - distDuringAccel : 0.0f;
+	timeToHit = remIgnTime + accelDuration + (maxSpd > 0.0f ? distCruise / maxSpd : 0.0f);
+  }
+
+  PreUpdate::TOWTimeToHit = timeToHit;
+  PreUpdate::TOWSteer = { 0.0f, 0.0f };
+
+  if (timeToHit > 0.0f) {
+	Vector effectiveTarget = targetPos;
+	if (timeToHit < 1.0f && Prediction::TOWPrediction())
+	  effectiveTarget = PreUpdate::predictionData.hitPos;
+
+	Vector dt = effectiveTarget - missilePos;
+	float dtLength = D3DXVec3Length(&dt);
+	if (dtLength == 0.0f) return;
+	dt /= dtLength;
+
+	Vector Left = Vector(missileMatrix._11, missileMatrix._12, missileMatrix._13);
+	Vector Up   = Vector(missileMatrix._21, missileMatrix._22, missileMatrix._23);
+
+	float deltaAngle = acosf(max(-1.0f, min(1.0f, D3DXVec3Dot(&missileForwardVec, &dt))));
+
+	// Steering components: +1 = 180° right/up, -1 = 180° left/down
+	float yaw   = atan2f(-D3DXVec3Dot(&Left, &dt), D3DXVec3Dot(&missileForwardVec, &dt)) / (float)PI;
+	float pitch = atan2f( D3DXVec3Dot(&Up,   &dt), D3DXVec3Dot(&missileForwardVec, &dt)) / (float)PI;
+
+	PreUpdate::TOWSteer = { yaw, pitch };
+  }
+
+  if (PreUpdate::TOWSteer.x != 0.0000f || PreUpdate::TOWSteer.y != 0.0000f) {
+	float sens = ReRange(distToTarget, 0.5f, 500.f, 0.5f, 12.f);
+	if (distToTarget <= 200.0f) sens = 750.f;
+
+	VehicleAxesInput axes = {};
+	axes.writeYaw = true;
+	axes.writePitch = true;
+	axes.yaw = PreUpdate::TOWSteer.x * sens;
+	axes.pitch = PreUpdate::TOWSteer.y * sens;
+	GetVehicleInputBackend().ApplyAxes(axes);
   }
 }
 
 void InputActions::VehicleTurretControll(const Vector2D& deltaVec, float delta, VeniceClientMissileEntity* pMissile) {
   if (!(GetAsyncKeyState(VK_MENU) & 0x8000) || this->isAutoPiloting) return;
 
-  if (!IsValidPtr(BorderInputNode::GetInstance()->m_pMouse)
-	|| !IsValidPtr(BorderInputNode::GetInstance()->m_pMouse->m_pDevice)) return;
-
   //Simulating mouse movement. I was trying to reverse IVehicle interface without success. Maybe you can make it ?
-
-  auto pM = BorderInputNode::GetInstance()->m_pMouse->m_pDevice;
 
   static bool wasAiming = false;
   bool isInRange = delta <= Cfg::AimBot::radius;
   bool isTOW = false;
 
-  //Maximalize our aimbot FOV when firing TOW.
   if (IsValidPtr(pMissile)
 	&& IsValidPtr(pMissile->m_pMissileEntityData)
 	&& pMissile->m_pMissileEntityData->IsTOW()) {
-	isInRange = true;
-	isTOW = true;
+	return;
   }
 
   if (isInRange) {
 	wasAiming = true;
-	pM->m_Buffer.x = -deltaVec.x / (isTOW ? 5.0f : Cfg::AimBot::smoothVehicle);
-	pM->m_Buffer.y = -deltaVec.y / (isTOW ? 5.0f : Cfg::AimBot::smoothVehicle);
+	GetVehicleInputBackend().ApplyTurretLook(deltaVec, Cfg::AimBot::smoothVehicle);
   }
   else if (wasAiming) {
 	wasAiming = false;
-	pM->m_Buffer.x = 0.f;
-	pM->m_Buffer.y = 0.f;
+	GetVehicleInputBackend().ResetTurretLook();
   }
 }
 

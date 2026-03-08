@@ -280,6 +280,7 @@ VeniceClientMissileEntity* Visuals::GetMissileEntity(ClientGameContext* pCtx, Cl
 
 	if (Cfg::ESP::ownMissile && isTOW) {
 	  const auto& missileBB = GetEntityAABB((ClientControllableEntity*)pMyMissile);
+
 	  ImVec2 scrn = missileBB.GetMin() + missileBB.GetCenter();
 
 	  std::vector<ImVec2> points =
@@ -653,6 +654,25 @@ void Visuals::RenderVisuals() {
 	// TODO: Draw reticle based on actual world position (raycast forward vector). i.e. render world3dtoscreen ray hit position
 	Renderer::DrawCircleOutlined(prevPos, 5, 15, ImColor::Red());
 	Renderer::DrawRectFilled(prevPos, { prevPos.x + 1.f, prevPos.y + 1.f }, ImColor::Red());
+  }
+
+  if (PreUpdate::debugAimpointOverrideEnabled && PreUpdate::debugAimpointOverridePos != ZERO_VECTOR) {
+	ImVec2 debugPos2D;
+	if (WorldToScreen(PreUpdate::debugAimpointOverridePos, debugPos2D)) {
+	  std::vector<ImVec2> points =
+	  {
+		  ImVec2(debugPos2D.x, debugPos2D.y - 5),
+		  ImVec2(debugPos2D.x + 5, debugPos2D.y),
+		  ImVec2(debugPos2D.x, debugPos2D.y + 5),
+		  ImVec2(debugPos2D.x - 5, debugPos2D.y),
+		  ImVec2(debugPos2D.x, debugPos2D.y - 5),
+	  };
+
+	  auto fill = Cfg::ESP::missileColor;
+	  fill.Value.w = std::clamp(Cfg::ESP::missileColor.Value.w - 0.5f, 0.0f, 1.0f);
+	  ImGui::GetForegroundDrawList()->AddConvexPolyFilled(points.data(), points.size(), fill);
+	  Renderer::DrawLine(points, Cfg::ESP::missileColor);
+	}
   }
 
   Vector aimPoint3D = ZERO_VECTOR;

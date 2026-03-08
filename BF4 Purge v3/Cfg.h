@@ -90,6 +90,7 @@ namespace Cfg {
 	extern bool useTVPrediction;
 
 	extern float TEST;
+	extern float towPredMult;
   }
 
   namespace DBG {

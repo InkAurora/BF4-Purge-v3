@@ -24,6 +24,7 @@ private:
   void JetBombControll(ClientVehicleEntity* pVeh, const Vector& targetPos, const WeaponData_s& pVehData, float* input);
   void JetWeaponsControll(ClientVehicleEntity* pVeh, const Vector& targetPos, float delta, float* input);
   void TVMissileControll(ClientVehicleEntity* pVeh, const Vector& targetPos, const Vector2D deltaVec, float delta, float* input);
+  void TOWMissileControl(ClientPlayer* pLocal, ClientVehicleEntity* pVeh, const Vector& targetPos, VeniceClientMissileEntity* pMissile);
   void VehicleTurretControll(const Vector2D& deltaVec, float delta, VeniceClientMissileEntity* pMissile);
   void SoldierWeaponControll(float delta, const Vector targetPos);
   void OverheatControll();

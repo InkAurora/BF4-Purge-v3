@@ -40,4 +40,12 @@ namespace PreUpdate {
   bool isValid;
   bool isPredicted;
   float angleY;
+
+  bool debugAimpointOverrideEnabled = false;
+  Vector debugAimpointOverridePos = ZERO_VECTOR;
+
+  bool isTOWLocked = false;
+  Vector TOWForwardVec = ZERO_VECTOR;
+  Vector2D TOWSteer = { 0.0f, 0.0f };
+  float TOWTimeToHit = 0.0f;
 }

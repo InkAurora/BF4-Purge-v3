@@ -1,16 +1,21 @@
 - Fix ImGui's input capture ==
 - Add force locking aimbot ==
 - Fix accuracy stats ==
+- Reverse iVehicle input concept ==
 - Align 3D boxes to player camera ==
 - Fix aimbot == (I'll never know if it's really fixed)
 - Fix angular velocity prediction ==
 - Add fast vehicles aimpoint prediction smoothing (prevent jittering on fast but small direction changes) == (Dumb idea, will never work)
+- Wire vehicle aimbot to iVehicle concept input
 - Add allied vehicles respawn warning
-- Add dynamic angular velocity prediction based on target distance, speed, and launcher properties
+- Add dynamic angular velocity prediction based on target distance, speed and launcher properties
 - Add config file auto-saving and loading
 - Add deploy hack
-- Fix RPG aimbot == (maybe)
+- Fix RPG aimbot == (definitely better than before, but still wrong)
 - Add TOW force locking and soft guiding (maybe impossible, needs visual contact)
+		-- Add TOW target lock after missile launch
+		-- Add TOW POV target alignment radar
+		-- NOTE: TOW aimbot is possible if we take the missile's direction and steer it using the mouse to align it with the target. I could add a soft prediction to offset the target's speed and also add some constant value that I could use to tune the steering.
 - Add headshot randomizer (auto bone selection)
 - Add all bones visibility check
 - Add dynamic aimbot bone selection based on visibility and distance

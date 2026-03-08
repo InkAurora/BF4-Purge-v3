@@ -57,4 +57,12 @@ namespace PreUpdate {
   extern bool isValid;
   extern bool isPredicted;
   extern float angleY;
+
+  extern bool debugAimpointOverrideEnabled;
+  extern Vector debugAimpointOverridePos;
+
+  extern bool isTOWLocked;
+  extern Vector TOWForwardVec;
+  extern Vector2D TOWSteer;
+  extern float TOWTimeToHit;
 }

@@ -3,6 +3,8 @@
 #include "EntityPrediction.h"
 #include "InputActions.h"
 #include "MiscFeatures.h"
+#include <cmath>
+#include "xorstr.hpp"
 
 int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaTime) {
   static auto oPreFrameUpdate = HooksManager::Get()->pPreFrameHook->GetOriginal<PreFrameUpdate_t>(Index::PRE_FRAME_UPDATE);
@@ -64,6 +66,39 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
     Visuals::WorldToScreen(pVehicleTurret->GetVehicleCrosshair(), G::viewPos2D);
   } else G::viewPos = (Vector)&pGameRenderer->m_pRenderView->m_ViewInverse._41;
 
+  static bool homeWasDown = false;
+  const bool homeDown = (GetAsyncKeyState(VK_HOME) & 0x8000) != 0;
+  if (homeDown && !homeWasDown) {
+    if (PreUpdate::debugAimpointOverrideEnabled) {
+      PreUpdate::debugAimpointOverrideEnabled = false;
+      PreUpdate::debugAimpointOverridePos = ZERO_VECTOR;
+    } else {
+      auto pRayCaster = Main::GetInstance()->GetRayCaster();
+      if (IsValidPtr(pRayCaster)) {
+        Vector forward = {
+          pGameRenderer->m_pRenderView->m_ViewInverse._31,
+          pGameRenderer->m_pRenderView->m_ViewInverse._32,
+          pGameRenderer->m_pRenderView->m_ViewInverse._33
+        };
+        D3DXVec3Normalize(&forward, &forward);
+
+        Vector rayEnd = G::viewPos - (forward * 10000.0f);
+        __declspec(align(16)) Vector from = G::viewPos;
+        __declspec(align(16)) Vector to = rayEnd;
+        RayCastHit hit;
+
+		if (pRayCaster->PhysicsRayQuery(xorstr_("ControllableFinder"), &from, &to, &hit, 0x4 | 0x10 | 0x20 | 0x80, NULL)) {
+          const float distance = Misc::Distance3D(G::viewPos, hit.m_position);
+          if (std::isfinite(distance) && distance > 1.0f && distance < 10000.0f) {
+            PreUpdate::debugAimpointOverrideEnabled = true;
+            PreUpdate::debugAimpointOverridePos = hit.m_position;
+          }
+        }
+      }
+    }
+  }
+  homeWasDown = homeDown;
+
   pLocal->GetCurrentWeaponData(&PreUpdate::weaponData);
 
   Matrix shootSpace; pLocal->GetWeaponShootSpace(shootSpace);
@@ -79,16 +114,24 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   }
 
   Vector aimPoint = ZERO_VECTOR;
+  Vector debugTargetVelocity = ZERO_VECTOR;
   auto& d = PreUpdate::preUpdatePlayersData;
-  if (!IsValidPtr(d.pBestTarget)) return result;
 
-  if (auto pTargetSoldier = d.pBestTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
-    if (!pTargetSoldier->IsAlive()) return result;
-    if (!IsValidPtr(pTargetSoldier->m_pRagdollComponent) || !pTargetSoldier->m_pRagdollComponent->GetBone(Cfg::AimBot::bone, aimPoint)) {
-      if (auto pVehicle = d.pBestTarget->GetVehicleEntity(); d.pBestTarget->InVehicle() && IsValidPtr(pVehicle)) {
-        BoundingBox3D aabb3D;
-        Visuals::GetEntityAABB(pVehicle, &aabb3D);
-        aimPoint = aabb3D.GetCenter();
+  const Vector* overrideTargetVelocity = nullptr;
+  if (PreUpdate::debugAimpointOverrideEnabled) {
+    aimPoint = PreUpdate::debugAimpointOverridePos;
+    overrideTargetVelocity = &debugTargetVelocity;
+  } else {
+    if (!IsValidPtr(d.pBestTarget)) return result;
+
+    if (auto pTargetSoldier = d.pBestTarget->GetSoldierEntity(); IsValidPtr(pTargetSoldier)) {
+      if (!pTargetSoldier->IsAlive()) return result;
+      if (!IsValidPtr(pTargetSoldier->m_pRagdollComponent) || !pTargetSoldier->m_pRagdollComponent->GetBone(Cfg::AimBot::bone, aimPoint)) {
+        if (auto pVehicle = d.pBestTarget->GetVehicleEntity(); d.pBestTarget->InVehicle() && IsValidPtr(pVehicle)) {
+          BoundingBox3D aabb3D;
+          Visuals::GetEntityAABB(pVehicle, &aabb3D);
+          aimPoint = aabb3D.GetCenter();
+        }
       }
     }
   }
@@ -96,7 +139,7 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   if (aimPoint == ZERO_VECTOR) return result;
 
   PreUpdate::isPredicted = Prediction::GetPredictedAimPoint(
-    pLocal, d.pBestTarget, aimPoint, &PreUpdate::predictionData, d.pMyMissile, &PreUpdate::weaponData);
+    pLocal, d.pBestTarget, aimPoint, &PreUpdate::predictionData, d.pMyMissile, &PreUpdate::weaponData, overrideTargetVelocity);
 
   InputActions::Get()->HandleInput(
     PreUpdate::predictionData.hitPos, pLocal, PreUpdate::weaponData, aimPoint, d.pMyMissile);
