@@ -4,6 +4,7 @@
 #include "InputActions.h"
 #include "Logger.h"
 #include "MiscFeatures.h"
+#include "SoldierInput.h"
 #include "VehicleInput.h"
 #include <cmath>
 #include "xorstr.hpp"
@@ -16,6 +17,18 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   auto pLevel = (IsValidPtr(pCtx) ? pCtx->m_pLevel : nullptr);
   auto pGameWorld = (IsValidPtr(pLevel) ? pLevel->m_pGameWorld : nullptr);
   static Level* s_lastLevel = nullptr;
+  static bool s_vehicleLookWasActive = false;
+
+  auto resetVehicleLookIfNeeded = [&](const char* reason) {
+	if (!s_vehicleLookWasActive) return;
+
+	GetVehicleInputBackend().ResetTurretLook();
+	s_vehicleLookWasActive = false;
+
+#ifdef _DEBUG
+	LOG_INFO("preframe", "vehicle look reset on route transition (%s)", reason);
+#endif
+  };
 
 #ifdef _DEBUG
   static bool s_gameWorldReady = false;
@@ -31,6 +44,7 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
 #endif
 
   if (!IsValidPtr(pGameWorld)) {
+    resetVehicleLookIfNeeded("game world unavailable");
     if (s_lastLevel != nullptr) G::matchEnded = true;
     s_lastLevel = nullptr;
     return result;
@@ -151,8 +165,10 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
     }
   }
 #endif
-  if (!IsValidPtr(pLocal) || !IsValidPtr(pLocal->GetSoldierEntity()) || !pLocal->GetSoldierEntity()->IsAlive())
+  if (!IsValidPtr(pLocal) || !IsValidPtr(pLocal->GetSoldierEntity()) || !pLocal->GetSoldierEntity()->IsAlive()) {
+    resetVehicleLookIfNeeded("local player unavailable");
     return result;
+  }
   
   auto pVehicleTurret = VehicleTurret::GetInstance();
   if (IsValidPtr(pVehicleTurret) && pLocal->InVehicle()) {
@@ -206,6 +222,8 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
   homeWasDown = homeDown;
 
   pLocal->GetCurrentWeaponData(&PreUpdate::weaponData);
+  PreUpdate::isPredicted = false;
+  PreUpdate::predictionData = {};
 
   Matrix shootSpace; pLocal->GetWeaponShootSpace(shootSpace);
 
@@ -242,10 +260,22 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
     }
   }
 
-  if (aimPoint == ZERO_VECTOR) return result;
+  if (aimPoint == ZERO_VECTOR) {
+    if (!pLocal->InVehicle()) {
+      GetSoldierInputBackend().ReleaseDirectAim("no aim point");
+    }
+
+    resetVehicleLookIfNeeded("no aim point");
+    return result;
+  }
 
   PreUpdate::isPredicted = Prediction::GetPredictedAimPoint(
     pLocal, d.pBestTarget, aimPoint, &PreUpdate::predictionData, d.pMyMissile, &PreUpdate::weaponData, overrideTargetVelocity);
+
+  const Vector inputAimPoint =
+  (PreUpdate::isPredicted && PreUpdate::predictionData.hitPos != ZERO_VECTOR)
+  ? PreUpdate::predictionData.hitPos
+  : aimPoint;
 
 #ifdef _DEBUG
   static bool s_predictionStateInitialized = false;
@@ -262,13 +292,14 @@ int __fastcall HooksManager::PreFrameUpdate(void* pThis, void* EDX, float deltaT
 #endif
 
   InputActions::Get()->HandleInput(
-    PreUpdate::predictionData.hitPos, pLocal, PreUpdate::weaponData, aimPoint, d.pMyMissile);
+    inputAimPoint, pLocal, PreUpdate::weaponData, aimPoint, d.pMyMissile);
 
   if (pLocal->InVehicle()) {
+    s_vehicleLookWasActive = true;
     ApplyPendingVehicleInputNodeOverlay(pThis);
     LogVehicleInputNodeDiagnostics(pThis, static_cast<int>(pLocal->m_EntryId));
   } else {
-    GetVehicleInputBackend().ResetTurretLook();
+    resetVehicleLookIfNeeded("on-foot route");
   }
 
   F::pFeatures->MinimapSpot(Cfg::Misc::minimapSpot);

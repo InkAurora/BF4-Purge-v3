@@ -1,6 +1,7 @@
 #include "InputActions.h"
 #include "EntityPrediction.h"
 #include "Logger.h"
+#include "SoldierInput.h"
 #include "VehicleInput.h"
 
 namespace {
@@ -23,6 +24,11 @@ const char* GetInputRouteName(InputRoute route) {
 	default:
 		return "idle";
 	}
+}
+
+bool IsDebugAimpointActive() {
+	return PreUpdate::debugAimpointOverrideEnabled
+		&& PreUpdate::debugAimpointOverridePos != ZERO_VECTOR;
 }
 
 #ifdef _DEBUG
@@ -50,7 +56,10 @@ void LogRouteChange(InputRoute route, int seatId) {
 }
 
 void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const WeaponData_s& pVehData, const Vector& targetPos, VeniceClientMissileEntity* pMissile) {
-  if (!Cfg::AimBot::enable) return;
+	if (!Cfg::AimBot::enable) {
+	GetSoldierInputBackend().ReleaseDirectAim("aimbot disabled");
+	return;
+	}
 
   BorderInputNode* pNode = BorderInputNode::GetInstance();
 
@@ -65,7 +74,10 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
 		}
 	}
 #endif
-	if (!IsValidPtr(pNode) || !IsValidPtr(pLocal)) return;
+	if (!IsValidPtr(pNode) || !IsValidPtr(pLocal)) {
+	  GetSoldierInputBackend().ReleaseDirectAim("input context unavailable");
+	  return;
+	}
 
 	if (!IsValidPtr(pNode->m_inputCache)) {
 #ifdef _DEBUG
@@ -74,6 +86,7 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
 			g_inputDebugState.inputCacheMissing = true;
 		}
 #endif
+		GetSoldierInputBackend().ReleaseDirectAim("input cache unavailable");
 		return;
 	}
 
@@ -119,6 +132,7 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
   PreUpdate::isTOWLocked = false;
 
   if (IsValidPtr(pVeh) && IsValidPtr(pVeh->m_pData) && (int)pLocal->m_EntryId < 4) {
+	GetSoldierInputBackend().ReleaseDirectAim("vehicle route active");
 	#ifdef _DEBUG
 	LogRouteChange(InputRoute::Vehicle, static_cast<int>(pLocal->m_EntryId));
 	if (g_inputDebugState.lastSeat != static_cast<int>(pLocal->m_EntryId)) {
@@ -151,6 +165,7 @@ void InputActions::HandleInput(const Vector& pos, ClientPlayer* pLocal, const We
 	SoldierWeaponControll(delta, pos);
   }
   else {
+	GetSoldierInputBackend().ReleaseDirectAim("soldier route unavailable");
 	#ifdef _DEBUG
 	LogRouteChange(InputRoute::None, -1);
 	g_inputDebugState.lastSeat = -1;
@@ -413,9 +428,7 @@ void InputActions::VehicleTurretControll(const Vector2D& deltaVec, float delta, 
 
   //Simulating mouse movement. I was trying to reverse IVehicle interface without success. Maybe you can make it ?
 
-	const bool hasDebugTarget =
-		PreUpdate::debugAimpointOverrideEnabled &&
-		PreUpdate::debugAimpointOverridePos != ZERO_VECTOR;
+	const bool hasDebugTarget = IsDebugAimpointActive();
 	const bool isInRange = hasDebugTarget || delta <= Cfg::AimBot::radius;
   bool isTOW = false;
 
@@ -440,43 +453,36 @@ void InputActions::VehicleTurretControll(const Vector2D& deltaVec, float delta, 
 }
 
 void InputActions::SoldierWeaponControll(float delta, const Vector targetPos) {
-  if (!(GetAsyncKeyState(VK_MENU) & 0x8000) || (delta > Cfg::AimBot::radius)) return;
+	const bool hasDebugTarget = IsDebugAimpointActive();
+	const bool isInRange = hasDebugTarget || delta <= Cfg::AimBot::radius;
+	if (!(GetAsyncKeyState(VK_MENU) & 0x8000) || !isInRange || targetPos == ZERO_VECTOR) {
+	GetSoldierInputBackend().ReleaseDirectAim("soldier aim inactive");
+	return;
+	}
 
-  auto* pLocal = PlayerManager::GetInstance()->GetLocalPlayer();
-  if (!IsValidPtr(pLocal)) return;
-
-  auto* pLocalSoldier = pLocal->GetSoldierEntity();
-  if (!IsValidPtr(pLocalSoldier)) return;
-
-  auto* pWepComp = pLocalSoldier->m_pWeaponComponent;
-  if (!IsValidPtr(pWepComp)) return;
-
-  auto* pWeapon = pWepComp->GetActiveSoldierWeapon();
-  if (!IsValidPtr(pWeapon)) return;
-
-  auto* pClientWeapon = pWeapon->m_pWeapon;
-  if (!IsValidPtr(pClientWeapon)) return;
-
-  auto* pAimSim = pWeapon->m_pAuthoritativeAiming;
-  if (!IsValidPtr(pAimSim)) return;
-
-  auto* pAimAssist = pAimSim->m_pFPSAimer;
-  if (!IsValidPtr(pAimAssist)) return;
+	SoldierAimContext context;
+	if (!GetSoldierInputBackend().ResolveAimContext(context)) {
+	GetSoldierInputBackend().ReleaseDirectAim("aim context unavailable");
+	return;
+	}
 
   //Simple aimbot with angle calculations. Awful in every aspect...
 
   auto angles = (Vector2D)Misc::CalcAngles2D(G::viewPos, targetPos);
   //angles.y = PreUpdate::angleY;
-  angles.x -= pAimSim->m_Sway.x;
-  angles.y -= pAimSim->m_Sway.y;
+	angles.x -= context.aimSimulation->m_Sway.x;
+	angles.y -= context.aimSimulation->m_Sway.y;
 
-  auto Delta = (angles - pAimAssist->m_AimAngles);
+	auto Delta = (angles - context.aimAssist->m_AimAngles);
   auto lDelta = D3DXVec2Length(&Delta);
   Misc::ClampAngles(&Delta);
-  angles = (pAimAssist->m_AimAngles + Delta / (lDelta > .002f ? Cfg::AimBot::smoothSoldier : 1.f));
+	angles = (context.aimAssist->m_AimAngles + Delta / (lDelta > .002f ? Cfg::AimBot::smoothSoldier : 1.f));
   Misc::ClampAngles(&angles);
 
-  pAimAssist->m_AimAngles = angles;
+	if (!GetSoldierInputBackend().ApplyDirectAim(context, angles)) {
+	  GetSoldierInputBackend().ReleaseDirectAim("direct aim write failed");
+	  return;
+	}
 
   //Old code with mouse simulation.
 

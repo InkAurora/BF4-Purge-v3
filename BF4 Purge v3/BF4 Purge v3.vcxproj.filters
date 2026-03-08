@@ -112,6 +112,9 @@
     <ClCompile Include="VehicleInput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SoldierInput.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MinHook\MinHook.h">
@@ -192,7 +195,12 @@
     <ClInclude Include="VMTHooking.h">
       <Filter>Hook</Filter>
     </ClInclude>
-    <ClInclude Include="VehicleInput.h">`r`n      <Filter>Features</Filter>`r`n    </ClInclude>
+    <ClInclude Include="VehicleInput.h">
+      <Filter>Features</Filter>
+    </ClInclude>
+    <ClInclude Include="SoldierInput.h">
+      <Filter>Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt">

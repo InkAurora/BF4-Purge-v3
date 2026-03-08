@@ -167,6 +167,7 @@
     <ClCompile Include="PreFrameUpdate.cpp" />
     <ClCompile Include="quartic.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="SoldierInput.cpp" />
     <ClCompile Include="TypeInfo.cpp" />
     <ClCompile Include="VehicleInput.cpp" />
     <ClCompile Include="Visuals.cpp" />
@@ -195,6 +196,7 @@
     <ClInclude Include="MiscFeatures.h" />
     <ClInclude Include="quartic.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="SoldierInput.h" />
     <ClInclude Include="TypeInfo.h" />
     <ClInclude Include="VehicleInput.h" />
     <ClInclude Include="Visuals.h" />
